@@ -1,23 +1,183 @@
 .sidebar-container {
-  @apply w-80 bg-gray-800 text-white p-5;
+  width: 280px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  color: #ffffff;
+  padding: 0;
+  height: 100vh;
+  border-right: 1px solid #404040;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.3);
+  flex-shrink: 0;
+  transition: width 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebar-container.collapsed {
+  width: 72px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 12px 10px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-container.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 20px 12px 10px 12px;
 }
 
 .sidebar-title {
-  @apply text-2xl mb-5;
+  font-size: 28px;
+  margin: 0;
+  color: #ff4444;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  letter-spacing: -0.5px;
+  transition: opacity 0.3s ease;
+}
+
+.toggle-button {
+  background: rgba(45, 45, 45, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #b3b3b3;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.toggle-button:hover {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ffffff;
+}
+
+.sidebar-container.collapsed .toggle-button {
+  margin: 0 auto;
 }
 
 .sidebar-nav {
-  @apply space-y-2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 20px 12px;
+}
+
+.sidebar-container.collapsed .sidebar-nav {
+  padding: 20px 8px;
 }
 
 .sidebar-button {
-  @apply w-full p-3 bg-blue-500 text-white border-none rounded-lg cursor-pointer text-base transition-colors duration-200 block;
+  width: 100%;
+  padding: 12px 16px;
+  background-color: transparent;
+  color: #b3b3b3;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-container.collapsed .sidebar-button {
+  padding: 12px 8px;
+  justify-content: center;
+}
+
+.sidebar-button-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.sidebar-container.collapsed .sidebar-button-content {
+  justify-content: center;
+  gap: 0;
+}
+
+.sidebar-button-text {
+  flex: 1;
+  text-align: left;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-container.collapsed .sidebar-button-text {
+  display: none;
+}
+
+.sidebar-button svg {
+  transition: all 0.2s ease;
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.sidebar-button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background-color: #ff4444;
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
 }
 
 .sidebar-button:hover {
-  @apply bg-blue-600;
+  background-color: #2a2a2a;
+  color: #ffffff;
+  transform: translateX(4px);
+}
+
+.sidebar-container.collapsed .sidebar-button:hover {
+  transform: translateX(0) scale(1.1);
+}
+
+.sidebar-button:hover::before {
+  transform: scaleY(1);
+}
+
+.sidebar-button:hover svg {
+  opacity: 1;
+  color: #ffffff;
 }
 
 .sidebar-button.active {
-  @apply bg-blue-700;
+  background: linear-gradient(90deg, #ff4444 0%, #cc3333 100%);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+  transform: translateX(4px);
+}
+
+.sidebar-container.collapsed .sidebar-button.active {
+  transform: translateX(0) scale(1.1);
+}
+
+.sidebar-button.active::before {
+  transform: scaleY(1);
+  background-color: #ffffff;
+}
+
+.sidebar-button.active svg {
+  opacity: 1;
+  color: #ffffff;
 }

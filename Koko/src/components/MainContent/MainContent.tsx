@@ -15,14 +15,14 @@ export const MainContent = ({ selectedOption }: MainContentProps) => {
         return <SimpleKokoWeb />;
       default:
         return (
-          <div className="welcome-content" style={{ textAlign: 'center', padding: '40px' }}>
-            <h2 className="welcome-title" style={{ fontSize: '32px', color: '#333', marginBottom: '16px' }}>
-              Bienvenido a Koko
+          <div className="welcome-content">
+            <h2 className="welcome-title">
+              Bienvenido a <span className="opera-accent">Koko</span>
             </h2>
-            <p className="welcome-text" style={{ fontSize: '18px', color: '#666' }}>
+            <p className="welcome-text">
               Selecciona una opción del sidebar para comenzar
             </p>
-            <p style={{ fontSize: '14px', color: '#999', marginTop: '20px' }}>
+            <p className="welcome-info">
               Opción seleccionada: {selectedOption || 'ninguna'}
             </p>
           </div>
@@ -31,7 +31,7 @@ export const MainContent = ({ selectedOption }: MainContentProps) => {
   };
 
   return (
-    <div className="main-content-container" style={{ flex: 1, backgroundColor: '#f5f5f5', padding: '20px', minHeight: '100vh' }}>
+    <div className="main-content-container">
       {renderContent()}
     </div>
   );

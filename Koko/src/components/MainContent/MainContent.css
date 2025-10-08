@@ -1,15 +1,81 @@
 .main-content-container {
-  @apply flex-1 bg-gray-50 p-10 flex flex-col items-center justify-center;
+  flex: 1;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  height: 100vh;
+  width: 100%;
+}
+
+.main-content-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(255, 68, 68, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(68, 68, 255, 0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.main-content-container > .welcome-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .welcome-content {
-  @apply text-center;
+  text-align: center;
+  padding: 40px;
+  position: relative;
+  z-index: 1;
+  max-width: 600px;
+  background: rgba(42, 42, 42, 0.3);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .welcome-title {
-  @apply text-3xl text-gray-800 mb-4;
+  font-size: 48px;
+  color: #ffffff;
+  margin-bottom: 16px;
+  margin-top: 0;
+  font-weight: 700;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  letter-spacing: -1px;
+}
+
+.welcome-title .opera-accent {
+  color: #ff4444;
+  display: inline-block;
+  background: linear-gradient(45deg, #ff4444, #ff6666);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .welcome-text {
-  @apply text-lg text-gray-600;
+  font-size: 18px;
+  color: #b3b3b3;
+  margin: 0 0 24px 0;
+  font-weight: 400;
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.welcome-info {
+  font-size: 14px;
+  color: #888888;
+  margin-top: 20px;
+  margin-bottom: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  opacity: 0.8;
 }

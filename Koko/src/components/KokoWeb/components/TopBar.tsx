@@ -1,128 +1,224 @@
-import React from 'react';
+import React, { useState } from 'react';
+import './TopBar.css';
 
 interface TopBarProps {
   url: string;
   setUrl: (url: string) => void;
   setStatus: (status: string) => void;
-  iframeRef: React.RefObject<HTMLIFrameElement | null>;
+  iframeRef?: React.RefObject<HTMLIFrameElement | null>;
+  webviewRef?: React.RefObject<any>;
+  isElectron?: boolean;
 }
 
-const TopBar: React.FC<TopBarProps> = ({ url, setUrl, setStatus, iframeRef }) => {
-  const [inputValue, setInputValue] = React.useState(url);
+interface SearchEngine {
+  name: string;
+  baseUrl: string;
+  searchUrl: string;
+  info: string;
+  color: string;
+}
+
+const searchEngines: SearchEngine[] = [
+  {
+    name: 'Google',
+    baseUrl: 'https://www.google.com',
+    searchUrl: 'https://www.google.com/search?q=',
+    info: 'Motor de búsqueda más popular',
+    color: '#4285f4'
+  },
+  {
+    name: 'DuckDuckGo',
+    baseUrl: 'https://duckduckgo.com',
+    searchUrl: 'https://duckduckgo.com/?q=',
+    info: 'Búsqueda privada sin rastreo',
+    color: '#de5833'
+  },
+  {
+    name: 'Bing',
+    baseUrl: 'https://www.bing.com',
+    searchUrl: 'https://www.bing.com/search?q=',
+    info: 'Motor de búsqueda de Microsoft',
+    color: '#0078d4'
+  },
+  {
+    name: 'Startpage',
+    baseUrl: 'https://www.startpage.com',
+    searchUrl: 'https://www.startpage.com/sp/search?query=',
+    info: 'Proxy privado de Google',
+    color: '#1a472a'
+  },
+  {
+    name: 'Yandex',
+    baseUrl: 'https://yandex.com',
+    searchUrl: 'https://yandex.com/search/?text=',
+    info: 'Motor de búsqueda ruso',
+    color: '#ff0000'
+  }
+];
+
+const TopBar: React.FC<TopBarProps> = ({ 
+  url, 
+  setUrl, 
+  setStatus, 
+  iframeRef, 
+  webviewRef, 
+  isElectron = false 
+}) => {
+  const [inputValue, setInputValue] = useState(url);
+  const [currentSearchEngine, setCurrentSearchEngine] = useState(0);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Sitios de prueba que funcionan bien
+  const testSites: Record<string, string> = {
+    'test': 'https://example.com',
+    'wikipedia': 'https://en.wikipedia.org',
+    'github': 'https://github.com',
+    'stackoverflow': 'https://stackoverflow.com',
+    'mdn': 'https://developer.mozilla.org',
+    'w3schools': 'https://www.w3schools.com',
+    'youtube': 'https://www.youtube.com',
+    'reddit': 'https://www.reddit.com',
+    'news': 'https://news.ycombinator.com'
+  };
 
   const handleNavigate = () => {
     let finalUrl = inputValue.trim();
     
-    // Si no contiene http, tratarlo como búsqueda en Google
-    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-      if (!finalUrl.includes('.')) {
-        // Usar Google Custom Search (embed) que permite iframe
-        finalUrl = `https://cse.google.com/cse?cx=partner-pub-4485363269731523:4384987261&ie=UTF-8&q=${encodeURIComponent(finalUrl)}`;
-        setStatus(`Buscando "${inputValue}" en Google...`);
-      } else {
-        finalUrl = `https://${finalUrl}`;
-      }
-    }
+    if (!finalUrl) return;
 
-    // Lista de sitios que funcionan bien en iframe
-    const testSites: Record<string, string> = {
-      'test': 'https://example.com',
-      'wikipedia': 'https://en.wikipedia.org',
-      'github': 'https://github.com',
-      'stackoverflow': 'https://stackoverflow.com',
-      'mdn': 'https://developer.mozilla.org',
-      'w3schools': 'https://www.w3schools.com'
-    };
-
-    // Si es un comando de prueba, usar el sitio correspondiente
-    const lowerInput = inputValue.toLowerCase().trim();
+    // Comandos especiales
+    const lowerInput = finalUrl.toLowerCase();
     if (testSites[lowerInput]) {
       finalUrl = testSites[lowerInput];
+      setStatus(`Navegando a ${lowerInput}...`);
     }
-
-    // Verificar si es Google y usar alternativa compatible
-    if (finalUrl.includes('google.com')) {
-      // Usar Startpage como proxy de Google que permite iframe
-      const searchTerm = finalUrl.match(/q=([^&]*)/)?.[1] || '';
-      if (searchTerm) {
-        finalUrl = `https://www.startpage.com/sp/search?query=${searchTerm}`;
-        setStatus('Redirigido a Startpage (proxy de Google compatible con iframe)');
-      } else {
-        finalUrl = 'https://www.startpage.com';
-        setStatus('Redirigido a Startpage (alternativa a Google)');
-      }
+    // URL completa
+    else if (finalUrl.startsWith('http://') || finalUrl.startsWith('https://')) {
+      setStatus('Navegando...');
+    }
+    // Dominio (contiene punto)
+    else if (finalUrl.includes('.') && !finalUrl.includes(' ')) {
+      finalUrl = `https://${finalUrl}`;
+      setStatus('Navegando...');
+    }
+    // Búsqueda
+    else {
+      const engine = searchEngines[currentSearchEngine];
+      finalUrl = engine.searchUrl + encodeURIComponent(finalUrl);
+      setStatus(`Buscando "${inputValue}" en ${engine.name}...`);
     }
 
     setUrl(finalUrl);
     setInputValue(finalUrl);
-    setStatus('cargando...');
+    setShowSuggestions(false);
+    
+    // Navegar según el entorno
+    if (isElectron && webviewRef?.current) {
+      webviewRef.current.src = finalUrl;
+    } else if (iframeRef?.current) {
+      iframeRef.current.src = finalUrl;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleNavigate();
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
     }
   };
 
   const handleBack = () => {
-    if (iframeRef.current?.contentWindow) {
+    if (isElectron && webviewRef?.current) {
+      webviewRef.current.goBack();
+    } else if (iframeRef?.current?.contentWindow) {
       iframeRef.current.contentWindow.history.back();
     }
+    setStatus('Navegando atrás...');
   };
 
   const handleForward = () => {
-    if (iframeRef.current?.contentWindow) {
+    if (isElectron && webviewRef?.current) {
+      webviewRef.current.goForward();
+    } else if (iframeRef?.current?.contentWindow) {
       iframeRef.current.contentWindow.history.forward();
     }
+    setStatus('Navegando adelante...');
   };
 
   const handleReload = () => {
-    if (iframeRef.current) {
-      setStatus('cargando...');
+    if (isElectron && webviewRef?.current) {
+      webviewRef.current.reload();
+    } else if (iframeRef?.current) {
       iframeRef.current.src = iframeRef.current.src;
+    }
+    setStatus('Recargando...');
+  };
+
+  const handleHomeNavigation = () => {
+    const engine = searchEngines[currentSearchEngine];
+    setUrl(engine.baseUrl);
+    setInputValue(engine.baseUrl);
+    setStatus(`Navegando a ${engine.name}...`);
+    
+    if (isElectron && webviewRef?.current) {
+      webviewRef.current.src = engine.baseUrl;
+    } else if (iframeRef?.current) {
+      iframeRef.current.src = engine.baseUrl;
     }
   };
 
+  const handleSearchEngineChange = () => {
+    setCurrentSearchEngine((prev) => (prev + 1) % searchEngines.length);
+  };
+
+  const getSuggestions = () => {
+    if (!inputValue.trim() || inputValue.startsWith('http')) return [];
+    
+    const input = inputValue.toLowerCase();
+    return Object.keys(testSites).filter(site => 
+      site.includes(input) || input.includes(site)
+    ).slice(0, 5);
+  };
+
+  const currentEngine = searchEngines[currentSearchEngine];
+
   return (
-    <div className="flex items-center gap-2 p-3 bg-white border-b border-gray-200 shadow-sm">
+    <div className="top-bar">
       {/* Botones de navegación */}
-      <div className="flex gap-1">
+      <div className="nav-buttons">
         <button
           onClick={handleBack}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+          className="nav-button"
           title="Atrás"
         >
           ←
         </button>
         <button
           onClick={handleForward}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+          className="nav-button"
           title="Adelante"
         >
           →
         </button>
         <button
           onClick={handleReload}
-          className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors"
+          className="nav-button"
           title="Recargar"
         >
           ⟳
         </button>
         <button
-          onClick={() => {
-            const engine = searchEngines[currentSearchEngine];
-            setUrl(engine.baseUrl.replace(/search\?.*$/, '').replace(/\/$/, ''));
-            setInputValue(engine.baseUrl.replace(/search\?.*$/, '').replace(/\/$/, ''));
-            setStatus('cargando...');
-          }}
-          className="px-3 py-1 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors"
-          title={`${searchEngines[currentSearchEngine].name} - ${searchEngines[currentSearchEngine].info}`}
+          onClick={handleHomeNavigation}
+          className="search-engine-button"
+          style={{ backgroundColor: currentEngine.color }}
+          title={`${currentEngine.name} - ${currentEngine.info}`}
         >
-          {searchEngines[currentSearchEngine].name}
+          {currentEngine.name}
         </button>
         <button
-          onClick={() => setCurrentSearchEngine((prev) => (prev + 1) % searchEngines.length)}
-          className="px-2 py-1 bg-gray-500 text-white text-sm rounded-md hover:bg-gray-600 transition-colors"
+          onClick={handleSearchEngineChange}
+          className="settings-button"
           title="Cambiar motor de búsqueda"
         >
           ⚙️
@@ -130,20 +226,53 @@ const TopBar: React.FC<TopBarProps> = ({ url, setUrl, setStatus, iframeRef }) =>
       </div>
 
       {/* Barra de direcciones */}
-      <div className="flex-1 flex gap-2">
+      <div className="address-bar-container">
         <input
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setShowSuggestions(e.target.value.length > 0 && !e.target.value.startsWith('http'));
+          }}
           onKeyPress={handleKeyPress}
-          placeholder={`Buscar en ${searchEngines[currentSearchEngine].name}, escribir URL o comandos: test, wikipedia, github...`}
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          onFocus={() => setShowSuggestions(inputValue.length > 0 && !inputValue.startsWith('http'))}
+          onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+          placeholder={`Buscar en ${currentEngine.name}, URL o comandos: ${Object.keys(testSites).slice(0, 3).join(', ')}...`}
+          className="address-input"
         />
+        
+        {/* Sugerencias */}
+        {showSuggestions && getSuggestions().length > 0 && (
+          <div className="suggestions-dropdown">
+            {getSuggestions().map((suggestion, index) => (
+              <div
+                key={index}
+                onClick={() => {
+                  setInputValue(suggestion);
+                  setShowSuggestions(false);
+                  // Navegar automáticamente
+                  const url = testSites[suggestion];
+                  setUrl(url);
+                  setStatus(`Navegando a ${suggestion}...`);
+                  if (isElectron && webviewRef?.current) {
+                    webviewRef.current.src = url;
+                  } else if (iframeRef?.current) {
+                    iframeRef.current.src = url;
+                  }
+                }}
+                className="suggestion-item"
+              >
+                🔍 {suggestion} → {testSites[suggestion]}
+              </div>
+            ))}
+          </div>
+        )}
+        
         <button
           onClick={handleNavigate}
-          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+          className="go-button"
         >
-          Ir
+          IR
         </button>
       </div>
     </div>

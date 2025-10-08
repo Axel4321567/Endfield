@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import TopBar from './components/TopBar';
+import './SimpleKokoWeb.css';
 
 // Declarar tipos para Electron API
 declare global {
@@ -17,9 +19,10 @@ declare global {
 
 export const SimpleKokoWeb: React.FC = () => {
   const [url, setUrl] = useState('https://www.google.com');
-  const [currentUrl, setCurrentUrl] = useState('');
+  const [status, setStatus] = useState('Listo');
   const [isElectron, setIsElectron] = useState(false);
   const webviewRef = useRef<any>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     // Detectar si estamos en Electron
@@ -33,164 +36,78 @@ export const SimpleKokoWeb: React.FC = () => {
     };
     
     checkElectron();
-  }, []);
-
-  const handleNavigate = () => {
-    // Validar URL
-    let validUrl = url;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      validUrl = 'https://' + url;
-    }
     
-    setCurrentUrl(validUrl);
-    
+    // Configurar eventos del webview si estamos en Electron
     if (isElectron && webviewRef.current) {
-      // En Electron, usar webview
-      webviewRef.current.src = validUrl;
-    } else {
-      // En Tauri, usar iframe (limitado)
-      console.log('📱 Navegando en modo Tauri/iframe:', validUrl);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleNavigate();
-    }
-  };
-  
-  return (
-    <div style={{
-      width: '100%',
-      height: '100vh',
-      backgroundColor: '#f0f0f0',
-      padding: '20px',
-      boxSizing: 'border-box',
-      display: 'flex',
-      flexDirection: 'column'
-    }}>
-      {/* Header */}
-      <div style={{
-        backgroundColor: isElectron ? 'lightgreen' : 'yellow',
-        padding: '15px',
-        border: '2px solid ' + (isElectron ? 'green' : 'red'),
-        borderRadius: '10px',
-        marginBottom: '15px'
-      }}>
-        <h1 style={{ 
-          margin: '0',
-          fontSize: '24px',
-          color: isElectron ? 'darkgreen' : 'red',
-          textAlign: 'center'
-        }}>
-          🌐 Koko-Web {isElectron ? '(Electron)' : '(Tauri)'}
-        </h1>
-      </div>
+      const webview = webviewRef.current;
       
-      {/* Navigation Bar */}
-      <div style={{
-        backgroundColor: 'white',
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '15px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <input 
-            type="text" 
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Escribe una URL..."
-            style={{
-              flex: 1,
-              padding: '10px',
-              fontSize: '14px',
-              border: '1px solid #ccc',
-              borderRadius: '4px'
-            }}
-          />
-          <button 
-            onClick={handleNavigate}
-            style={{
-              padding: '10px 20px',
-              fontSize: '14px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            IR
-          </button>
-        </div>
-        
-        {currentUrl && (
-          <div style={{
-            marginTop: '10px',
-            padding: '8px',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '4px',
-            fontSize: '12px',
-            color: '#666'
-          }}>
-            📍 Navegando a: <strong>{currentUrl}</strong>
-          </div>
-        )}
+      const handleLoadStart = () => setStatus('Cargando...');
+      const handleLoadStop = () => setStatus('Completado');
+      const handleLoadAbort = () => setStatus('Error de carga');
+      const handleDomReady = () => setStatus('DOM listo');
+      
+      webview.addEventListener('loadstart', handleLoadStart);
+      webview.addEventListener('loadstop', handleLoadStop);
+      webview.addEventListener('loadabort', handleLoadAbort);
+      webview.addEventListener('dom-ready', handleDomReady);
+      
+      return () => {
+        webview.removeEventListener('loadstart', handleLoadStart);
+        webview.removeEventListener('loadstop', handleLoadStop);
+        webview.removeEventListener('loadabort', handleLoadAbort);
+        webview.removeEventListener('dom-ready', handleDomReady);
+      };
+    }
+  }, [isElectron]);
+
+  return (
+    <div className="simple-koko-web">
+      {/* Barra de navegación con TopBar completo */}
+      <TopBar
+        url={url}
+        setUrl={setUrl}
+        setStatus={setStatus}
+        iframeRef={iframeRef}
+        webviewRef={webviewRef}
+        isElectron={isElectron}
+      />
+
+      {/* Barra de estado */}
+      <div className="status-bar">
+        <span>📍 {status}</span>
+        <span className="status-separator">|</span>
+        <span>🔗 {url}</span>
       </div>
 
-      {/* Browser Content */}
-      <div style={{
-        flex: 1,
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
+      {/* Contenido del navegador */}
+      <div className="browser-content">
         {isElectron ? (
           // Webview para Electron
           <webview
             ref={webviewRef}
-            src={currentUrl || url}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none'
-            }}
+            src={url}
+            className="browser-webview"
             nodeintegration={false}
             webpreferences="contextIsolation=true"
           />
         ) : (
-          // Iframe para Tauri (limitado)
-          <div style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexDirection: 'column',
-            backgroundColor: '#f8f9fa'
-          }}>
-            <h3 style={{ color: '#666', marginBottom: '10px' }}>
-              ⚠️ Modo Tauri - Navegación Limitada
-            </h3>
-            <p style={{ color: '#888', textAlign: 'center', margin: '0' }}>
-              Para navegación completa, usa: <strong>npm run dev</strong> (Electron)
-            </p>
-            {currentUrl && (
-              <div style={{
-                marginTop: '20px',
-                padding: '15px',
-                backgroundColor: 'white',
-                borderRadius: '8px',
-                border: '1px solid #ddd'
-              }}>
-                <p style={{ margin: '0', fontSize: '14px' }}>
-                  URL solicitada: <strong>{currentUrl}</strong>
-                </p>
-              </div>
-            )}
+          // Iframe para Tauri con mensaje mejorado
+          <div className="tauri-container">
+            <div className="tauri-warning">
+              <h3>⚠️ Modo Tauri - Navegación Limitada</h3>
+              <p>
+                Muchos sitios bloquean iframes. Para navegación completa, usa: <strong>npm run dev</strong> (Electron)
+              </p>
+            </div>
+            
+            <iframe
+              ref={iframeRef}
+              src={url}
+              className="tauri-iframe"
+              onLoad={() => setStatus('Cargado en iframe')}
+              onError={() => setStatus('Error: Sitio bloquea iframe')}
+              title="Navegador web"
+            />
           </div>
         )}
       </div>
