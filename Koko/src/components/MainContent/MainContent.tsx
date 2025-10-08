@@ -1,4 +1,4 @@
-import { KokoWeb } from '../KokoWeb/KokoWeb';
+import SimpleKokoWeb from '../KokoWeb/SimpleKokoWeb';
 import { Dashboard } from '../Dashboard/Dashboard';
 import './MainContent.css';
 
@@ -12,15 +12,18 @@ export const MainContent = ({ selectedOption }: MainContentProps) => {
       case 'dashboard':
         return <Dashboard />;
       case 'koko-web':
-        return <KokoWeb />;
+        return <SimpleKokoWeb />;
       default:
         return (
           <div className="welcome-content">
             <h2 className="welcome-title">
-              Bienvenido a Koko
+              Bienvenido a <span className="opera-accent">Koko</span>
             </h2>
             <p className="welcome-text">
               Selecciona una opción del sidebar para comenzar
+            </p>
+            <p className="welcome-info">
+              Opción seleccionada: {selectedOption || 'ninguna'}
             </p>
           </div>
         );

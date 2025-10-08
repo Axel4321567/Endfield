@@ -101,3 +101,52 @@ pids/
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Electron
+electron-builder-output/
+*.app
+*.dmg
+*.deb
+*.rpm
+*.exe
+*.msi
+*.pkg
+*.zip
+*.tar.gz
+
+# Electron cache
+electron/cache/
+electron-cache/
+
+# Package Lock (si usas npm)
+package-lock.json
+
+# IDE y Editor específicos
+*.swp
+*.swo
+.vscode/settings.json
+.vscode/launch.json
+
+# Archivos de sistema y temporales específicos del proyecto
+.DS_Store?
+.Spotlight-V100
+.Trashes
+Icon?
+
+# Archivos de depuración
+debug.log
+electron-debug.log
+
+# Archivos de configuración local del desarrollador
+.env.local
+.env.development
+.env.production
+
+# Tauri específico (ampliado)
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/gen/
+
+# Cache de Vite expandido
+.vite/
+vite-cache/
