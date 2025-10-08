@@ -1,0 +1,31 @@
+.dashboard-container {
+  @apply text-center w-full;
+}
+
+.dashboard-header {
+  @apply bg-white border-b border-gray-200 p-5 mb-5 rounded-lg shadow-sm;
+}
+
+.dashboard-title {
+  @apply text-3xl text-gray-800 m-0;
+}
+
+.dashboard-content {
+  @apply bg-white p-6 rounded-lg shadow-sm;
+}
+
+.dashboard-grid {
+  @apply grid grid-cols-2 gap-4;
+}
+
+.dashboard-card {
+  @apply bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200;
+}
+
+.card-title {
+  @apply text-lg font-semibold text-gray-800 mb-2;
+}
+
+.card-content {
+  @apply text-sm text-gray-600 m-0;
+}

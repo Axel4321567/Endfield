@@ -1,0 +1,15 @@
+.main-content-container {
+  @apply flex-1 bg-gray-50 p-10 flex flex-col items-center justify-center;
+}
+
+.welcome-content {
+  @apply text-center;
+}
+
+.welcome-title {
+  @apply text-3xl text-gray-800 mb-4;
+}
+
+.welcome-text {
+  @apply text-lg text-gray-600;
+}
