@@ -1,0 +1,23 @@
+.sidebar-container {
+  @apply w-80 bg-gray-800 text-white p-5;
+}
+
+.sidebar-title {
+  @apply text-2xl mb-5;
+}
+
+.sidebar-nav {
+  @apply space-y-2;
+}
+
+.sidebar-button {
+  @apply w-full p-3 bg-blue-500 text-white border-none rounded-lg cursor-pointer text-base transition-colors duration-200 block;
+}
+
+.sidebar-button:hover {
+  @apply bg-blue-600;
+}
+
+.sidebar-button.active {
+  @apply bg-blue-700;
+}

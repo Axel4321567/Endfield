@@ -1,0 +1,21 @@
+{
+  "context": [
+    "src/",
+    "src-tauri/",
+    "package.json",
+    "vite.config.ts",
+    "README.md"
+  ],
+  "instructions": [
+    "El proyecto se llama Koko.",
+    "Está hecho con React + TypeScript + Tauri.",
+    "Cada componente tiene su carpeta con su CSS propio.",
+    "Después de corregir o modificar un componente, sigue estos pasos:",
+    "1. Compila el proyecto usando 'npm run tauri build' o 'npm run tauri dev' según el contexto.",
+    "2. Lanza automáticamente un simple navegador interno apuntando a la vista o componente corregido (por ejemplo 'localhost:1420').",
+    "3. Muestra un mensaje de verificación para comprobar si el cambio se aplicó correctamente.",
+    "Usa nombres de componentes en PascalCase y estructura clara.",
+    "Usa TailwindCSS para estilos.",
+    "El proyecto se dividirá más adelante en módulos (Koko-Web, extensiones, etc.), mantenlo preparado."
+  ]
+}

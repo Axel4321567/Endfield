@@ -1,0 +1,4 @@
+.app-container {
+  @apply w-screen h-screen flex;
+  font-family: Arial, sans-serif;
+}
