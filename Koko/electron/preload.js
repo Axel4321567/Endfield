@@ -37,6 +37,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   utils: {
     openExternal: (url) => ipcRenderer.invoke('utils-open-external', url),
     showDevTools: () => ipcRenderer.invoke('utils-show-devtools')
+  },
+  
+  // APIs de control de aplicación
+  app: {
+    quit: () => ipcRenderer.invoke('app-quit'),
+    closeWindow: () => ipcRenderer.invoke('app-close-window'),
+    minimize: () => ipcRenderer.invoke('app-minimize'),
+    getStatus: () => ipcRenderer.invoke('app-get-status')
   }
 });
 

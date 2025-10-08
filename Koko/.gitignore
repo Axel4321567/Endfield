@@ -172,3 +172,22 @@ CACHEDIR.TAG
 *.log.*
 debug*.log
 console*.log
+
+# Tauri target directory (build artifacts)
+src-tauri/target/
+
+# Electron builder output
+dist-electron/
+release/
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+
+# Temporary development files
+*.tmp
+*.temp
+.DS_Store?
+
+# Runtime configuration
+.runtime/

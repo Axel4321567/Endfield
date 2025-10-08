@@ -21,6 +21,12 @@ declare global {
         goForward: () => Promise<void>;
         reload: () => Promise<void>;
       };
+      app: {
+        quit: () => Promise<void>;
+        closeWindow: () => Promise<void>;
+        minimize: () => Promise<void>;
+        getStatus: () => Promise<any>;
+      };
     };
   }
 }
