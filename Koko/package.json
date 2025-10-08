@@ -8,6 +8,8 @@
     "start": "vite",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dev:vite": "vite --port 5175",
+    "dev:web": "vite",
+    "dev:electron-only": "electron .",
     "dev:tauri": "npx tauri dev",
     "dev:electron": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "tsc -b && vite build",

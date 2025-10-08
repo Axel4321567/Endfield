@@ -5,13 +5,14 @@ import { useTabs } from './hooks/useTabs';
 import './App.css';
 
 function App() {
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Estado global de pestañas para persistir entre navegación del sidebar
   const tabsManager = useTabs();
 
   const handleSelectOption = (option: string) => {
+    console.log(`🎯 App: Cambiando a opción: ${option}`);
     setSelectedOption(option);
   };
 

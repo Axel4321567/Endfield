@@ -10,6 +10,7 @@ export const Dashboard = () => {
       </div>
       <div className="dashboard-content">
         <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          
           <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
             <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Estadísticas</h3>
             <p className="card-content" style={{ color: '#666' }}>Información general del sistema</p>

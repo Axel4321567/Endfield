@@ -1,0 +1,35 @@
+.session-renderer {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.session-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.session-active {
+  display: block !important;
+  opacity: 1;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.session-hidden {
+  display: none !important;
+  opacity: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Asegurar que los componentes mantengan su estado completo */
+.session-container > * {
+  width: 100%;
+  height: 100%;
+}
