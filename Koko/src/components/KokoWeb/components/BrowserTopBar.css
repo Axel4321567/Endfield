@@ -1,0 +1,237 @@
+.browser-top-bar {
+  background: linear-gradient(180deg, #2d2d2d 0%, #252525 100%);
+  border-bottom: 1px solid #404040;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.empty-browser {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+}
+
+.home-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: linear-gradient(45deg, #ff4444, #cc3333);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.home-button:hover {
+  background: linear-gradient(45deg, #ff5555, #dd4444);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+}
+
+.navigation-bar {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 12px;
+  background: linear-gradient(180deg, #2d2d2d 0%, #252525 100%);
+}
+
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.nav-button:hover:not(.disabled) {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ffffff;
+}
+
+.nav-button.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.address-bar-container {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+}
+
+.search-engine-selector {
+  position: relative;
+}
+
+.engine-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.engine-button:hover {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ffffff;
+}
+
+.engine-name {
+  font-weight: 500;
+}
+
+.engine-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: linear-gradient(135deg, #2d2d2d 0%, #252525 100%);
+  border: 1px solid #404040;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  min-width: 200px;
+  margin-top: 4px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.engine-option {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.engine-option:hover {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ffffff;
+}
+
+.engine-option.selected {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ffffff;
+}
+
+.engine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.engine-option .engine-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.engine-description {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.address-input {
+  flex: 1;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  color: #ffffff;
+  font-size: 14px;
+  outline: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.address-input::placeholder {
+  color: #666666;
+}
+
+.browser-menu {
+  display: flex;
+  align-items: center;
+}
+
+.menu-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.menu-button:hover {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navigation-bar {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  
+  .nav-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .engine-button {
+    padding: 6px 8px;
+  }
+  
+  .engine-name {
+    display: none;
+  }
+  
+  .address-input {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}

@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { MainContent } from './components/MainContent/MainContent';
+import { useTabs } from './hooks/useTabs';
 import './App.css';
 
 function App() {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Estado global de pestañas para persistir entre navegación del sidebar
+  const tabsManager = useTabs();
 
   const handleSelectOption = (option: string) => {
     setSelectedOption(option);
@@ -23,7 +27,10 @@ function App() {
         isCollapsed={sidebarCollapsed}
         onToggle={toggleSidebar}
       />
-      <MainContent selectedOption={selectedOption} />
+      <MainContent 
+        selectedOption={selectedOption} 
+        tabsManager={tabsManager}
+      />
     </div>
   );
 }

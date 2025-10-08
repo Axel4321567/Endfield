@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SidebarOption } from '../types';
+import type { SidebarOption } from '../types';
 
 export const useSidebar = () => {
   const [selectedOption, setSelectedOption] = useState<SidebarOption>(null);

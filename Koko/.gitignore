@@ -150,3 +150,25 @@ src-tauri/gen/
 # Cache de Vite expandido
 .vite/
 vite-cache/
+
+# Archivos de respaldo y temporales específicos del desarrollo
+*_backup.tsx
+*_backup.ts
+*_backup.js
+*_backup.css
+*.backup.*
+
+# Archivos de configuración específicos de IDE
+.copilot.json
+
+# Archivos Rust específicos
+.rustc_info.json
+CACHEDIR.TAG
+
+# Electron específico expandido
+*.asar
+
+# Logs específicos del proyecto
+*.log.*
+debug*.log
+console*.log
