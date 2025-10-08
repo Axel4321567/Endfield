@@ -11,7 +11,7 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ width: '100vw', height: '100vh', display: 'flex', fontFamily: 'Arial, sans-serif' }}>
       <Sidebar
         selectedOption={selectedOption}
         onSelectOption={handleSelectOption}
