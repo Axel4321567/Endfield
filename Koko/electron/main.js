@@ -15,7 +15,10 @@ async function createWindow() {
       contextIsolation: true,
       webSecurity: false, // Permite cargar contenido externo en webview
       allowRunningInsecureContent: true,
-      webviewTag: true // Habilitar webview tags
+      webviewTag: true, // Habilitar webview tags
+      experimentalFeatures: true,
+      enableRemoteModule: false,
+      sandbox: false
     },
     icon: path.join(__dirname, '../public/vite.svg'), // Icono de la app
     titleBarStyle: 'default',
@@ -47,8 +50,8 @@ async function createWindow() {
       console.error('❌ No se pudo conectar a ningún puerto de Vite');
     }
     
-    // Abrir DevTools en desarrollo
-    win.webContents.openDevTools();
+    // DevTools se pueden abrir manualmente con Ctrl+Shift+I o F12
+    // win.webContents.openDevTools();
   } else {
     win.loadFile(path.join(__dirname, '../dist/index.html'));
   }
@@ -62,15 +65,56 @@ async function createWindow() {
 
 // Configurar sesión para permitir webview
 app.whenReady().then(async () => {
-  // Habilitar webview tags
+  // Habilitar webview tags y configurar permisos
   const ses = session.defaultSession;
+  
+  // 🔓 Configuración más permisiva para webviews
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    const headers = { ...details.requestHeaders };
+    
+    // Agregar User-Agent estándar
+    headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    
+    callback({ requestHeaders: headers });
+  });
+
+  // Interceptar todos los headers de respuesta
   ses.webRequest.onHeadersReceived((details, callback) => {
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': ['script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' *']
+    console.log('🔧 Interceptando headers para:', details.url);
+    
+    // Filtrar headers problemáticos
+    const filteredHeaders = {};
+    
+    Object.keys(details.responseHeaders || {}).forEach(key => {
+      const lowerKey = key.toLowerCase();
+      // Eliminar headers que bloquean embedding
+      if (!lowerKey.includes('x-frame-options') &&
+          !lowerKey.includes('content-security-policy') &&
+          !lowerKey.includes('x-content-type-options') &&
+          !lowerKey.includes('strict-transport-security') &&
+          !lowerKey.includes('cross-origin') &&
+          !lowerKey.includes('referrer-policy')) {
+        filteredHeaders[key] = details.responseHeaders[key];
       }
     });
+    
+    // Agregar headers permisivos específicamente para sitios externos
+    if (!details.url.includes('localhost')) {
+      filteredHeaders['Access-Control-Allow-Origin'] = ['*'];
+      filteredHeaders['Access-Control-Allow-Methods'] = ['GET, POST, PUT, DELETE, OPTIONS'];
+      filteredHeaders['Access-Control-Allow-Headers'] = ['*'];
+      filteredHeaders['X-Frame-Options'] = ['ALLOWALL'];
+    }
+    
+    console.log('✅ Headers filtrados:', Object.keys(filteredHeaders));
+    callback({ responseHeaders: filteredHeaders });
+  });
+
+  // Permitir navegación a sitios externos en webviews
+  ses.setPermissionRequestHandler((webContents, permission, callback) => {
+    console.log('🔐 Permiso solicitado:', permission);
+    // Permitir todas las solicitudes de permisos para webviews
+    callback(true);
   });
 
   await createWindow();

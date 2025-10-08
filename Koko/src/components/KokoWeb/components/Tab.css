@@ -1,0 +1,133 @@
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+  max-width: 240px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #b3b3b3;
+  font-size: 13px;
+  margin-right: 2px;
+  overflow: hidden;
+  user-select: none;
+}
+
+.tab:hover {
+  background: linear-gradient(135deg, #333333 0%, #252525 100%);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.tab.active {
+  background: linear-gradient(135deg, #ff4444 0%, #cc3333 100%);
+  border-color: #ff4444;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.3);
+}
+
+.tab.active:hover {
+  background: linear-gradient(135deg, #ff5555 0%, #dd4444 100%);
+}
+
+.tab-favicon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.tab.active .tab-favicon {
+  opacity: 1;
+}
+
+.tab-favicon img {
+  border-radius: 2px;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tab-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.tab.active .tab-title {
+  font-weight: 600;
+}
+
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.tab:hover .tab-close {
+  opacity: 0.7;
+}
+
+.tab-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab.active .tab-close {
+  opacity: 0.8;
+}
+
+.tab.active .tab-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Efecto de arrastre (para futura implementación) */
+.tab.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+  z-index: 1000;
+}
+
+/* Responsive: tabs más pequeños en pantallas pequeñas */
+@media (max-width: 768px) {
+  .tab {
+    min-width: 80px;
+    max-width: 160px;
+    padding: 6px 8px;
+  }
+  
+  .tab-title {
+    font-size: 12px;
+  }
+}

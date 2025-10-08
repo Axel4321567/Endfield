@@ -1,0 +1,124 @@
+.tab-bar {
+  display: flex;
+  align-items: flex-end;
+  background: linear-gradient(180deg, #1a1a1a 0%, #0f0f0f 100%);
+  border-bottom: 1px solid #404040;
+  padding: 0 8px;
+  min-height: 48px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-bar::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, #ff4444 50%, transparent 100%);
+  opacity: 0.3;
+}
+
+.tab-list {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  gap: 0;
+  padding: 8px 0 0 0;
+}
+
+.tab-list::-webkit-scrollbar {
+  display: none;
+}
+
+.new-tab-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(45, 45, 45, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #b3b3b3;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0 4px 8px 8px;
+  flex-shrink: 0;
+}
+
+.new-tab-button:hover {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+.new-tab-button:active {
+  transform: scale(0.95);
+}
+
+/* Scrollbar personalizado para tab-list en navegadores webkit */
+.tab-list {
+  scrollbar-width: thin;
+  scrollbar-color: #404040 transparent;
+}
+
+.tab-list::-webkit-scrollbar {
+  height: 4px;
+  display: block;
+}
+
+.tab-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-list::-webkit-scrollbar-thumb {
+  background: #404040;
+  border-radius: 2px;
+}
+
+.tab-list::-webkit-scrollbar-thumb:hover {
+  background: #ff4444;
+}
+
+/* Efectos de sombra para indicar scroll */
+.tab-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 50px;
+  bottom: 0;
+  width: 20px;
+  background: linear-gradient(90deg, transparent 0%, rgba(26, 26, 26, 0.8) 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.tab-bar.has-overflow::after {
+  opacity: 1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .tab-bar {
+    min-height: 44px;
+    padding: 0 4px;
+  }
+  
+  .new-tab-button {
+    width: 28px;
+    height: 28px;
+    margin: 0 2px 6px 4px;
+  }
+  
+  .tab-list {
+    gap: 1px;
+  }
+}
