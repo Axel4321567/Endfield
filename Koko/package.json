@@ -102,8 +102,6 @@
     "eastasianwidth": "^0.2.0",
     "ee-first": "^1.1.1",
     "ejs": "^3.1.10",
-    "electron": "^30.5.1",
-    "electron-builder": "^24.13.3",
     "electron-builder-squirrel-windows": "^24.13.3",
     "electron-publish": "^24.13.1",
     "electron-reload": "^1.5.0",
@@ -421,8 +419,70 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^30.5.1",
+    "electron-builder": "^24.13.3",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.koko.browser",
+    "productName": "Koko Browser",
+    "copyright": "Copyright © 2025 Koko Browser",
+    "directories": {
+      "output": "dist-electron",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "public",
+        "to": "public",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "src-tauri/icons/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "src-tauri/icons/icon.ico",
+      "uninstallerIcon": "src-tauri/icons/icon.ico"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Network"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.productivity"
+    }
   },
   "keywords": [],
   "author": "",
