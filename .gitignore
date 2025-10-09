@@ -1,5 +1,20 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+*/dist/
+*/build/
+
+# Electron build artifacts
+dist-electron/
+Koko/dist-electron/
+
 # Vite cache
 .vite/
+*/vite/
 
 # Logs
 logs
@@ -10,6 +25,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
 # OS generated files
 .DS_Store
 .DS_Store?
@@ -18,12 +43,14 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # Environment variables
 .env
@@ -31,3 +58,43 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# Temporary folders
+tmp/
+temp/
+
+# Rust/Tauri build artifacts
+src-tauri/target/
+*/src-tauri/target/
+
+# Capacitor
+.capacitor/
+android/
+ios/
+
+# Local Netlify folder
+.netlify

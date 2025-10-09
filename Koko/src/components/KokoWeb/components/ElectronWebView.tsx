@@ -129,21 +129,24 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
       
       setStatus(`Error: ${event.errorDescription || 'No se pudo cargar la página'}`);
       
+      // 🛡️ EVITAR bucles con about:blank
+      if (currentUrl === 'about:blank' || currentUrl.includes('about:blank')) {
+        console.log('🛑 Error en about:blank - detener inmediatamente sin redirección');
+        setStatus('Página de inicio - Use la barra de direcciones para navegar');
+        return; // NO hacer nada más
+      }
+      
       // 🛡️ Protección ESTRICTA contra bucles infinitos
       if (currentUrl === lastErrorUrlRef.current) {
         retryCountRef.current += 1;
         console.log(`⚠️ Reintento #${retryCountRef.current} para la misma URL:`, currentUrl);
         
-        if (retryCountRef.current >= 1) { // CAMBIAR A 1 para detener inmediatamente
-          console.log('🛑 UN solo reintento permitido - DETENIENDO bucle definitivamente');
+        if (retryCountRef.current >= 1) { // Solo 1 reintento
+          console.log('🛑 Un solo reintento permitido - DETENIENDO bucle definitivamente');
           
-          // NO usar ventanas externas, solo about:blank
-          if (onUrlChange) {
-            console.log('✅ Usando about:blank - fin del bucle');
-            onUrlChange('about:blank', 'Página de inicio');
-            setStatus('Sitio no disponible - Usar navegación desde barra de direcciones');
-          }
-          return; // SALIR definitivamente
+          // NO redirigir a about:blank, simplemente mostrar error estático
+          setStatus('Sitio no disponible - Use la barra de direcciones para navegar a otro sitio');
+          return; // SALIR definitivamente sin cambiar URL
         }
       } else {
         // Nueva URL que falla, resetear contador
@@ -157,14 +160,10 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
         
         // FORZAR PARADA del bucle infinito después del primer intento
         if (retryCountRef.current === 1) {
-          console.log('🛑 PRIMER ERROR ERR_ABORTED - Deteniendo bucle y usando fallback interno');
+          console.log('🛑 PRIMER ERROR ERR_ABORTED - Deteniendo bucle sin redirección');
           
-          // En lugar de ventana externa, usar about:blank y mostrar mensaje
-          if (onUrlChange) {
-            console.log('✅ Usando about:blank como fallback seguro');
-            onUrlChange('about:blank', 'Página de inicio - Google no disponible en webview');
-            setStatus('Google no es compatible con webview - Usar búsqueda desde barra de direcciones');
-          }
+          // NO redirigir a ninguna URL, solo mostrar mensaje de error
+          setStatus('Sitio no es compatible con webview - Use la barra de direcciones para navegar');
           return; // DETENER aquí, no más reintentos
         }
         
