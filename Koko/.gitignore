@@ -11,7 +11,20 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-electron
+build
+out
 *.local
+
+# Electron builds
+*.exe
+*.dmg
+*.app
+*.zip
+*.blockmap
+win-unpacked/
+mac/
+linux-unpacked/
 
 # Editor directories and files
 .vscode/*
@@ -47,6 +60,25 @@ coverage/
 # Vite cache
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Session and temporary files
+session-data/
+user-data/
+*.tmp
+*.temp
+
+# Test files generated temporarily
+TestComponent.tsx
+TestApp.tsx
+
+# OS generated files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 
 # TypeScript
 *.tsbuildinfo
@@ -180,6 +212,27 @@ src-tauri/target/
 dist-electron/
 release/
 
+# Electron específico
+*.exe.blockmap
+builder-effective-config.yaml
+builder-debug.yml
+win-unpacked/
+mac/
+linux-unpacked/
+
+# Archivos de instalación generados
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.AppImage
+*.snap
+
+# Cache de aplicaciones
+electron-cache/
+.electron-gyp/
+.electron/
+
 # OS generated files
 Thumbs.db
 Desktop.ini
@@ -191,3 +244,32 @@ Desktop.ini
 
 # Runtime configuration
 .runtime/
+
+# Archivos de respaldo del desarrollo
+*_backup.tsx
+*_backup.ts
+*_backup.js
+*_backup.css
+*.backup.*
+
+# Archivos de producción compilados
+serve-production.js.map
+
+# Logs específicos de Electron y desarrollo
+electron-debug.log
+main-process.log
+renderer-process.log
+
+# Archivos temporales de VSCode
+.vscode/settings.json
+.vscode/launch.json
+.vscode/tasks.json
+
+# Cache específico del proyecto
+.cache/
+.temp/
+.tmp/
+
+# Archivos de configuración local específicos
+config.local.json
+settings.local.json

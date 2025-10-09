@@ -23,7 +23,7 @@ const searchEngines: SearchEngine[] = [
     name: 'Google',
     baseUrl: 'https://www.google.com',
     searchUrl: 'https://www.google.com/search?q=',
-    info: 'Motor de búsqueda más popular',
+    info: 'Motor de búsqueda más popular (Se abre en ventana externa)',
     color: '#4285f4'
   },
   {
