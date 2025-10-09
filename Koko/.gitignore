@@ -48,6 +48,11 @@ linux-unpacked/
 coverage/
 *.lcov
 
+# Test files temporales (agregado para archivos de prueba)
+test-*.js
+test-*.ts
+*.test.tmp
+
 # nyc test coverage
 .nyc_output/
 
