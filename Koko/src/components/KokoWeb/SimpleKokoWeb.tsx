@@ -55,7 +55,7 @@ declare global {
   }
 }
 
-export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => {
+export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsManager }) => {
   const [isElectron, setIsElectron] = useState(false);
   const [showBookmarkManager, setShowBookmarkManager] = useState(false);
   const webviewRef = useRef<any>(null);
@@ -374,6 +374,22 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
   // Manejador para actualizar URL y título cuando el webview navega
   const handleUrlChange = (url: string, title?: string) => {
     if (activeTab) {
+      // 🔄 Detectar bucles de actualización
+      const now = Date.now();
+      const changeKey = `${activeTab.id}-${url}`;
+      
+      if ((window as any).__lastUrlChanges) {
+        const lastChange = (window as any).__lastUrlChanges[changeKey];
+        if (lastChange && (now - lastChange) < 500) {
+          console.log('🛑 BUCLE DETECTADO - Bloqueando actualización rápida de URL:', url);
+          return;
+        }
+      } else {
+        (window as any).__lastUrlChanges = {};
+      }
+      
+      (window as any).__lastUrlChanges[changeKey] = now;
+      
       // 🎵 BLOQUEO TOTAL para YouTube playlist: NO actualizar NADA
       if (url.includes('youtube.com/watch') && activeTab.url.includes('youtube.com/watch')) {
         console.log('🛑 YouTube playlist - BLOQUEANDO actualización completamente para evitar bucles');
@@ -393,19 +409,16 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
   };
 
   const renderWebContent = () => {
-    console.log('🎨 [DEBUG] Renderizando contenido web...');
-    console.log('🎨 [DEBUG] Estado completo:', {
-      totalTabs: tabs.length,
-      activeTabId,
-      activeTab: activeTab ? {
-        id: activeTab.id,
-        url: activeTab.url,
-        title: activeTab.title,
-        isLoading: activeTab.isLoading
-      } : null,
-      allTabs: tabs.map(t => ({ id: t.id, url: t.url, title: t.title })),
-      isElectron
-    });
+    // Throttle de logs para evitar spam
+    const now = Date.now();
+    if (!((window as any).__lastRenderLog) || (now - (window as any).__lastRenderLog) > 5000) {
+      console.log('🎨 [DEBUG] Renderizando contenido web...', {
+        totalTabs: tabs.length,
+        activeTabId,
+        activeTabUrl: activeTab?.url || 'none'
+      });
+      (window as any).__lastRenderLog = now;
+    }
     
     if (tabs.length === 0) {
       return (
@@ -564,6 +577,6 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
       )}
     </div>
   );
-};
+});
 
 export default SimpleKokoWeb;

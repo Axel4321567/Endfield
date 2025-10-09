@@ -101,7 +101,7 @@ const MenuIcon = () => (
   </svg>
 );
 
-export const BrowserTopBar = ({
+export const BrowserTopBar = React.memo(({
   tabs,
   activeTabId,
   activeTab,
@@ -120,10 +120,10 @@ export const BrowserTopBar = ({
   const [showEngineDropdown, setShowEngineDropdown] = useState(false);
 
   React.useEffect(() => {
-    if (activeTab) {
+    if (activeTab && activeTab.url !== addressValue) {
       setAddressValue(activeTab.url);
     }
-  }, [activeTab?.url]);
+  }, [activeTab?.url, addressValue]);
 
   const isUrl = (text: string): boolean => {
     const urlPattern = /^(https?:\/\/)|(www\.)|(\w+\.\w+)/;
@@ -288,4 +288,4 @@ export const BrowserTopBar = ({
       </div>
     </div>
   );
-};
+});
