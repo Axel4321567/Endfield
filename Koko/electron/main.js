@@ -1,9 +1,24 @@
 import { app, BrowserWindow, session, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Configurar cache de Electron para evitar errores de permisos
+const userData = app.getPath('userData');
+const cacheDir = path.join(userData, 'cache');
+
+// Configurar directorio de cache antes de que la app esté lista
+app.setPath('userData', userData);
+app.setPath('cache', cacheDir);
+
+// Configuración adicional para evitar errores de cache
+app.commandLine.appendSwitch('--disable-http-cache');
+app.commandLine.appendSwitch('--disable-gpu-process-crash-limit');
+app.commandLine.appendSwitch('--no-sandbox');
+app.commandLine.appendSwitch('--disable-web-security');
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -21,7 +36,7 @@ async function createWindow() {
       experimentalFeatures: true,
       enableRemoteModule: false,
       sandbox: false,
-      partition: 'persist:main', // Usar sesión persistente
+      partition: 'persist:koko-main', // Usar sesión persistente específica
       nativeWindowOpen: true,
       nodeIntegrationInWorker: false,
       nodeIntegrationInSubFrames: false,
@@ -30,7 +45,10 @@ async function createWindow() {
       // Configuraciones específicas para YouTube y media
       enableBlinkFeatures: 'PictureInPictureAPI,BackgroundVideoPlayback,MediaSession',
       disableBlinkFeatures: '',
-      autoplayPolicy: 'no-user-gesture-required'
+      autoplayPolicy: 'no-user-gesture-required',
+      // Configuraciones adicionales para evitar errores de cache
+      backgroundThrottling: false,
+      offscreen: false
     },
     icon: path.join(__dirname, '../public/vite.svg'), // Icono de la app
     titleBarStyle: 'default',
@@ -107,8 +125,18 @@ async function createWindow() {
 
 // Configurar sesión para permitir webview y funcionalidades avanzadas de YouTube
 app.whenReady().then(async () => {
-  // Habilitar webview tags y configurar permisos
+  // Configurar cache y sesión para evitar errores de permisos
   const ses = session.defaultSession;
+  
+  // Configurar cache de manera más específica
+  await ses.clearCache();
+  await ses.clearStorageData({
+    storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers']
+  });
+  
+  console.log('🧹 Cache limpiado para evitar errores de permisos');
+  
+  // Habilitar webview tags y configurar permisos
 
   // Configurar argumentos de Chromium para YouTube
   app.commandLine.appendSwitch('enable-features', 'PictureInPictureAPI,MediaSession,BackgroundVideoPlayback');
