@@ -26,6 +26,7 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
   const retryCountRef = useRef<number>(0); // Contador de reintentos para evitar bucles
   const lastErrorUrlRef = useRef<string>(''); // Última URL que causó error
   const isBlockedDomainRef = useRef<boolean>(false); // Flag para dominios bloqueados
+  const currentUrlRef = useRef<string>(''); // URL actual para evitar recargas innecesarias
 
   // 🚀 DETECCIÓN INMEDIATA de dominios bloqueados (antes de cargar)
   const checkForBlockedDomain = (targetUrl: string) => {
@@ -129,21 +130,24 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
       
       setStatus(`Error: ${event.errorDescription || 'No se pudo cargar la página'}`);
       
+      // 🛡️ EVITAR bucles con about:blank
+      if (currentUrl === 'about:blank' || currentUrl.includes('about:blank')) {
+        console.log('🛑 Error en about:blank - detener inmediatamente sin redirección');
+        setStatus('Página de inicio - Use la barra de direcciones para navegar');
+        return; // NO hacer nada más
+      }
+      
       // 🛡️ Protección ESTRICTA contra bucles infinitos
       if (currentUrl === lastErrorUrlRef.current) {
         retryCountRef.current += 1;
         console.log(`⚠️ Reintento #${retryCountRef.current} para la misma URL:`, currentUrl);
         
-        if (retryCountRef.current >= 1) { // CAMBIAR A 1 para detener inmediatamente
-          console.log('🛑 UN solo reintento permitido - DETENIENDO bucle definitivamente');
+        if (retryCountRef.current >= 1) { // Solo 1 reintento
+          console.log('🛑 Un solo reintento permitido - DETENIENDO bucle definitivamente');
           
-          // NO usar ventanas externas, solo about:blank
-          if (onUrlChange) {
-            console.log('✅ Usando about:blank - fin del bucle');
-            onUrlChange('about:blank', 'Página de inicio');
-            setStatus('Sitio no disponible - Usar navegación desde barra de direcciones');
-          }
-          return; // SALIR definitivamente
+          // NO redirigir a about:blank, simplemente mostrar error estático
+          setStatus('Sitio no disponible - Use la barra de direcciones para navegar a otro sitio');
+          return; // SALIR definitivamente sin cambiar URL
         }
       } else {
         // Nueva URL que falla, resetear contador
@@ -157,14 +161,10 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
         
         // FORZAR PARADA del bucle infinito después del primer intento
         if (retryCountRef.current === 1) {
-          console.log('🛑 PRIMER ERROR ERR_ABORTED - Deteniendo bucle y usando fallback interno');
+          console.log('🛑 PRIMER ERROR ERR_ABORTED - Deteniendo bucle sin redirección');
           
-          // En lugar de ventana externa, usar about:blank y mostrar mensaje
-          if (onUrlChange) {
-            console.log('✅ Usando about:blank como fallback seguro');
-            onUrlChange('about:blank', 'Página de inicio - Google no disponible en webview');
-            setStatus('Google no es compatible con webview - Usar búsqueda desde barra de direcciones');
-          }
+          // NO redirigir a ninguna URL, solo mostrar mensaje de error
+          setStatus('Sitio no es compatible con webview - Use la barra de direcciones para navegar');
           return; // DETENER aquí, no más reintentos
         }
         
@@ -200,8 +200,29 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
     };
 
     const handleNavigate = (event: any) => {
+      console.log('🔄 Navegación detectada:', event.url);
+      
+      // 🛑 BLOQUEO TOTAL: YouTube playlist - NO notificar cambios de URL
+      if (event.url && event.url.includes('youtube.com/watch') && url.includes('youtube.com/watch')) {
+        console.log('🛑 YouTube playlist BLOQUEADO - NO notificar cambio de URL para evitar bucles');
+        setStatus('YouTube: Reproduciendo playlist');
+        // NO llamar onUrlChange - esto es lo que causa los bucles
+        return;
+      }
+      
+      // Para primera carga de YouTube o navegación a YouTube desde otro sitio
+      if (event.url && event.url.includes('youtube.com/watch') && !url.includes('youtube.com/watch')) {
+        console.log('🎵 Primera carga de YouTube - permitir');
+        setStatus('YouTube: Cargando video');
+        if (onUrlChange && event.url) {
+          onUrlChange(event.url);
+        }
+        return;
+      }
+      
       setStatus(`Navegando a: ${event.url}`);
-      // Actualizar URL cuando comience la navegación
+      
+      // Para otros sitios, proceder normalmente
       if (onUrlChange && event.url) {
         onUrlChange(event.url);
       }
@@ -209,7 +230,14 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
 
     const handleDomReady = () => {
       console.log('🎯 DOM listo para:', url);
-      // Actualizar título cuando el DOM esté listo
+      
+      // 🛑 YouTube playlist: NO actualizar información para evitar bucles
+      if (url.includes('youtube.com/watch') && webview.getURL && webview.getURL().includes('youtube.com/watch')) {
+        console.log('🛑 YouTube playlist DOM ready - NO actualizar para evitar bucles');
+        return;
+      }
+      
+      // Actualizar título cuando el DOM esté listo (solo para sitios no-YouTube playlist)
       if (onUrlChange && webview.getURL && webview.getTitle) {
         const currentUrl = webview.getURL();
         const currentTitle = webview.getTitle() || 'Sin título';
@@ -227,7 +255,15 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
     webview.addEventListener('did-start-loading', handleLoadStart);
     webview.addEventListener('did-stop-loading', handleLoadStop);
     webview.addEventListener('did-fail-load', handleLoadFail);
-    webview.addEventListener('will-navigate', handleNavigate);
+    
+    // 🛑 YouTube: NO agregar will-navigate listener para evitar bucles en playlists
+    if (!url.includes('youtube.com/watch')) {
+      webview.addEventListener('will-navigate', handleNavigate);
+      console.log('✅ will-navigate listener agregado para sitio no-YouTube');
+    } else {
+      console.log('🛑 YouTube detectado - will-navigate listener NO agregado para evitar bucles');
+    }
+    
     webview.addEventListener('dom-ready', handleDomReady);
 
     // Event listener para manejar nuevas ventanas como nuevas pestañas
@@ -256,7 +292,12 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
       webview.removeEventListener('did-start-loading', handleLoadStart);
       webview.removeEventListener('did-stop-loading', handleLoadStop);
       webview.removeEventListener('did-fail-load', handleLoadFail);
-      webview.removeEventListener('will-navigate', handleNavigate);
+      
+      // Solo remover will-navigate si fue agregado
+      if (!url.includes('youtube.com/watch')) {
+        webview.removeEventListener('will-navigate', handleNavigate);
+      }
+      
       webview.removeEventListener('dom-ready', handleDomReady);
       webview.removeEventListener('new-window', handleNewWindow);
     };
@@ -265,9 +306,21 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
   // Actualizar URL cuando cambie - SOLO si no es dominio bloqueado
   useEffect(() => {
     const webview = webviewRef.current as any;
-    if (webview && url && webview.src !== url && !isBlockedDomainRef.current) {
-      console.log('🔄 Actualizando URL de webview:', url);
-      webview.src = url;
+    if (webview && url && !isBlockedDomainRef.current) {
+      // 🎵 YouTube: NO forzar cambio de src si ya estamos en YouTube
+      // Dejar que YouTube maneje su propia navegación interna
+      if (url.includes('youtube.com/watch') && currentUrlRef.current.includes('youtube.com/watch')) {
+        console.log('🎵 YouTube navegación interna - NO cambiar src, dejar que YouTube maneje');
+        currentUrlRef.current = url; // Actualizar referencia pero no el webview
+        return;
+      }
+      
+      // Para otros sitios o primera carga de YouTube, cambiar src normalmente
+      if (webview.src !== url) {
+        console.log('🔄 Actualizando URL de webview:', url);
+        webview.src = url;
+        currentUrlRef.current = url;
+      }
     }
   }, [url]);
 

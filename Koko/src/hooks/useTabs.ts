@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Tab, TabsManager } from '../types';
+import { useSessionManager } from './useSessionManager';
 
 export type { Tab } from '../types';
 
@@ -9,10 +10,84 @@ export interface TabManagerState {
 }
 
 export const useTabs = (): TabsManager => {
+  const sessionManager = useSessionManager();
   const [state, setState] = useState<TabManagerState>({
     tabs: [],
     activeTabId: null
   });
+  const [isSessionRestored, setIsSessionRestored] = useState(false);
+
+  // Restaurar sesión al inicializar
+  useEffect(() => {
+    if (!isSessionRestored) {
+      console.log('🔄 Inicializando sistema de pestañas con sesiones...');
+      const restoredSession = sessionManager.restoreSession();
+      
+      if (restoredSession && restoredSession.tabs.length > 0) {
+        console.log('✅ Restaurando pestañas desde sesión:', restoredSession.tabs);
+        
+        // Convertir las pestañas de sesión a pestañas completas
+        const restoredTabs: Tab[] = restoredSession.tabs.map(sessionTab => ({
+          id: sessionTab.id,
+          title: sessionTab.title,
+          url: sessionTab.url,
+          favicon: undefined,
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          history: sessionTab.url ? [sessionTab.url] : [],
+          historyIndex: sessionTab.url ? 0 : -1
+        }));
+
+        setState({
+          tabs: restoredTabs,
+          activeTabId: restoredSession.activeTabId
+        });
+      } else {
+        console.log('🆕 No hay sesión previa, comenzando con pestaña vacía por defecto');
+        // Crear pestaña por defecto vacía (sin URL para mostrar SpeedDial)
+        const defaultTab: Tab = {
+          id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: 'Nueva pestaña',
+          url: '', // Vacía para mostrar SpeedDial
+          favicon: undefined,
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          history: [],
+          historyIndex: -1
+        };
+
+        setState({
+          tabs: [defaultTab],
+          activeTabId: defaultTab.id
+        });
+      }
+      
+      setIsSessionRestored(true);
+    }
+  }, [isSessionRestored, sessionManager]);
+
+  // Guardar sesión cuando cambian las pestañas (con debounce para YouTube)
+  useEffect(() => {
+    if (isSessionRestored && state.tabs.length > 0) {
+      // Debounce para YouTube: evitar guardado excesivo durante playlist
+      const isYouTubeTab = state.tabs.some(tab => tab.url.includes('youtube.com/watch'));
+      
+      if (isYouTubeTab) {
+        console.log('🎵 YouTube detectado - guardado con delay para evitar spam');
+        const timeoutId = setTimeout(() => {
+          console.log('💾 Guardando sesión YouTube (delayed)...');
+          sessionManager.updateSession(state.tabs, state.activeTabId);
+        }, 1000); // 1 segundo de delay
+        
+        return () => clearTimeout(timeoutId);
+      } else {
+        console.log('💾 Guardando sesión automáticamente...');
+        sessionManager.updateSession(state.tabs, state.activeTabId);
+      }
+    }
+  }, [state.tabs, state.activeTabId, isSessionRestored, sessionManager]);
 
   const createNewTab = useCallback((url: string = '', title: string = 'Nueva pestaña') => {
     const newTab: Tab = {

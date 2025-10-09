@@ -162,18 +162,13 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
       };
     }
 
-    // Crear la primera pestaña si no hay pestañas - usar about:blank para evitar bucles
-    if (tabs.length === 0) {
-      console.log('🆕 Creando primera pestaña con about:blank (página segura)');
-      
-      if (electronMode) {
-        console.log('🎯 Modo Electron: Usando about:blank como página inicial segura');
-        console.log('✅ El usuario puede navegar a Google desde la barra de direcciones');
-        createNewTab('about:blank', 'Página de inicio');
-      } else {
-        console.log('🌐 Modo Web: Usando about:blank como página inicial');
-        createNewTab('about:blank', 'Página de inicio');
-      }
+    // Sistema de sesiones integrado - useTabs se encarga de la inicialización
+    // No crear pestañas aquí, el hook useTabs maneja la restauración de sesiones
+    console.log('📋 Sistema de pestañas con sesiones inicializado');
+    console.log('🔍 Pestañas actuales:', tabs.length);
+    
+    if (tabs.length > 0) {
+      console.log('✅ Pestañas cargadas desde sesión o creadas por defecto');
     }
   }, [tabs.length, createNewTab]);
 
@@ -379,6 +374,15 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
   // Manejador para actualizar URL y título cuando el webview navega
   const handleUrlChange = (url: string, title?: string) => {
     if (activeTab) {
+      // 🎵 BLOQUEO TOTAL para YouTube playlist: NO actualizar NADA
+      if (url.includes('youtube.com/watch') && activeTab.url.includes('youtube.com/watch')) {
+        console.log('🛑 YouTube playlist - BLOQUEANDO actualización completamente para evitar bucles');
+        console.log('🎵 YouTube maneja su propia navegación interna, NO interferir');
+        // NO hacer NADA - dejar que YouTube maneje todo internamente
+        return;
+      }
+      
+      // Para otras navegaciones (incluida primera carga de YouTube), proceder normalmente
       const updates: any = { url };
       if (title && title !== 'Sin título') {
         updates.title = title;
@@ -389,13 +393,20 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
   };
 
   const renderWebContent = () => {
-    console.log('🎨 Renderizando contenido web:', {
-      activeTab: activeTab?.id,
-      url: activeTab?.url,
-      isElectron,
-      tabsCount: tabs.length
+    console.log('🎨 [DEBUG] Renderizando contenido web...');
+    console.log('🎨 [DEBUG] Estado completo:', {
+      totalTabs: tabs.length,
+      activeTabId,
+      activeTab: activeTab ? {
+        id: activeTab.id,
+        url: activeTab.url,
+        title: activeTab.title,
+        isLoading: activeTab.isLoading
+      } : null,
+      allTabs: tabs.map(t => ({ id: t.id, url: t.url, title: t.title })),
+      isElectron
     });
-
+    
     if (tabs.length === 0) {
       return (
         <div className="no-active-tab">
@@ -453,6 +464,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
                 }}
               >
                 <ElectronWebView
+                  key={tab.url.includes('youtube.com/watch') ? `youtube-${tab.id}` : `webview-${tab.id}-${tab.url}`}
                   url={tab.url}
                   setStatus={() => {}}
                   onUrlChange={(url, title) => {
