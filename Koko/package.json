@@ -16,6 +16,7 @@
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
     "electron": "^38.2.2",
+    "electron-builder": "^26.0.12",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",
     "typescript": "^5.9.3",
@@ -24,9 +25,58 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"electron .\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron-pack": "electron-builder",
+    "preelectron-pack": "npm run build",
+    "dist": "npm run build && electron-builder",
+    "pack": "electron-builder --dir",
+    "make": "electron-builder --win --x64",
+    "installer": "powershell -ExecutionPolicy Bypass -File build-installer-simple.ps1",
+    "installer:js": "node build-installer.js"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "build": {
+    "appId": "com.koko.browser",
+    "productName": "Koko Browser",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "!electron/automation/**/*",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "electron/automation",
+        "to": "automation"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "src-tauri/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Koko Browser"
+    },
+    "portable": {
+      "artifactName": "KokoBrowser-Portable-${version}.exe"
+    }
+  }
 }
