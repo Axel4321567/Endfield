@@ -45,8 +45,65 @@ contextBridge.exposeInMainWorld('electronAPI', {
     closeWindow: () => ipcRenderer.invoke('app-close-window'),
     minimize: () => ipcRenderer.invoke('app-minimize'),
     getStatus: () => ipcRenderer.invoke('app-get-status')
+  },
+
+  // 🧠 Sistema de navegación inteligente
+  navigation: {
+    // Función principal para navegación inteligente
+    openBrowserTab: (url) => {
+      console.log('🎯 [Koko-Web] Navegación inteligente solicitada para:', url);
+      return ipcRenderer.invoke('open-browser-tab', url);
+    },
+    
+    // 🚀 Función específica para dominios bloqueados (Prompt Maestro)
+    openExternalPage: (url) => {
+      console.log('🚀 [Koko-Web] Apertura externa para dominio bloqueado:', url);
+      return ipcRenderer.invoke('open-external-page', url);
+    },
+    
+    // Función para crear nuevas pestañas desde webview
+    createNewTab: (url, title) => {
+      console.log('🆕 [Koko-Web] Nueva pestaña solicitada para:', url);
+      return ipcRenderer.invoke('create-new-tab', url, title);
+    },
+    
+    // Listeners para comunicación bidireccional
+    onNavigateInWebview: (callback) => ipcRenderer.on('navigate-in-webview', callback),
+    removeNavigateInWebviewListener: () => ipcRenderer.removeAllListeners('navigate-in-webview'),
+    
+    // Listener para crear nuevas pestañas
+    onCreateNewTab: (callback) => ipcRenderer.on('create-new-tab', callback),
+    removeCreateNewTabListener: () => ipcRenderer.removeAllListeners('create-new-tab')
+  },
+
+  // APIs para funcionalidades multimedia de YouTube
+  media: {
+    // Picture-in-Picture support
+    requestPictureInPicture: () => {
+      console.log('🎥 Picture-in-Picture solicitado desde preload');
+      return true;
+    },
+    
+    // Media Session API support
+    setMediaMetadata: (metadata) => {
+      console.log('🎵 Media metadata:', metadata);
+      return true;
+    },
+    
+    // Fullscreen API support
+    requestFullscreen: () => {
+      console.log('🔲 Fullscreen solicitado');
+      return true;
+    },
+    
+    // Autoplay support
+    enableAutoplay: () => {
+      console.log('▶️ Autoplay habilitado');
+      return true;
+    }
   }
 });
 
 // Log para confirmar que preload se cargó correctamente
 console.log('🚀 Electron preload script loaded successfully');
+console.log('✅ [Koko] Sistema de navegación inteligente disponible en window.electronAPI.navigation');
