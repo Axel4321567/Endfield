@@ -11,6 +11,7 @@ interface BrowserTopBarProps {
   onTabClose: (tabId: string) => void;
   onNewTab: () => void;
   onNavigate: (tabId: string, url: string) => void;
+  onSearch?: (query: string) => void; // Nueva función para búsqueda integrada
   onGoBack: (tabId: string) => void;
   onGoForward: (tabId: string) => void;
   onRefresh: (tabId: string) => void;
@@ -101,7 +102,7 @@ const MenuIcon = () => (
   </svg>
 );
 
-export const BrowserTopBar = ({
+export const BrowserTopBar = React.memo(({
   tabs,
   activeTabId,
   activeTab,
@@ -109,6 +110,7 @@ export const BrowserTopBar = ({
   onTabClose,
   onNewTab,
   onNavigate,
+  onSearch,
   onGoBack,
   onGoForward,
   onRefresh,
@@ -120,10 +122,10 @@ export const BrowserTopBar = ({
   const [showEngineDropdown, setShowEngineDropdown] = useState(false);
 
   React.useEffect(() => {
-    if (activeTab) {
+    if (activeTab && activeTab.url !== addressValue) {
       setAddressValue(activeTab.url);
     }
-  }, [activeTab?.url]);
+  }, [activeTab?.url, addressValue]);
 
   const isUrl = (text: string): boolean => {
     const urlPattern = /^(https?:\/\/)|(www\.)|(\w+\.\w+)/;
@@ -137,17 +139,29 @@ export const BrowserTopBar = ({
     
     if (!finalUrl) {
       finalUrl = selectedEngine.baseUrl;
+      setStatus(`Navegando a: ${finalUrl}`);
+      onNavigate(activeTabId, finalUrl);
     } else if (isUrl(finalUrl)) {
+      // Es una URL
       if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
         finalUrl = 'https://' + finalUrl;
       }
+      setStatus(`Navegando a: ${finalUrl}`);
+      onNavigate(activeTabId, finalUrl);
     } else {
-      finalUrl = selectedEngine.searchUrl + encodeURIComponent(finalUrl);
+      // Es una búsqueda - usar búsqueda integrada si está disponible
+      if (onSearch) {
+        console.log('🔍 [TopBar] Usando búsqueda integrada para:', finalUrl);
+        setStatus(`Buscando: ${finalUrl}`);
+        onSearch(finalUrl);
+      } else {
+        // Fallback a motor de búsqueda tradicional
+        finalUrl = selectedEngine.searchUrl + encodeURIComponent(finalUrl);
+        setStatus(`Navegando a: ${finalUrl}`);
+        onNavigate(activeTabId, finalUrl);
+      }
     }
-
-    setStatus(`Navegando a: ${finalUrl}`);
-    onNavigate(activeTabId, finalUrl);
-  }, [activeTabId, selectedEngine, onNavigate, setStatus]);
+  }, [activeTabId, selectedEngine, onNavigate, onSearch, setStatus]);
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -288,4 +302,4 @@ export const BrowserTopBar = ({
       </div>
     </div>
   );
-};
+});

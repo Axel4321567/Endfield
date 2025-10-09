@@ -3,6 +3,9 @@ import { BrowserTopBar } from './components/BrowserTopBar';
 import ElectronWebView from './components/ElectronWebView';
 import SpeedDial from './components/SpeedDial';
 import BookmarkManager from './components/BookmarkManager';
+import { searchGoogle } from '../../APIs/GoogleSearchAPI';
+import type { GoogleSearchResult } from '../../APIs/GoogleSearchAPI';
+import { processSearchResults } from '../../APIs/SearchAutomation';
 import type { TabsManager } from '../../types';
 import './SimpleKokoWeb.css';
 
@@ -55,11 +58,123 @@ declare global {
   }
 }
 
-export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => {
+export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsManager }) => {
   const [isElectron, setIsElectron] = useState(false);
   const [showBookmarkManager, setShowBookmarkManager] = useState(false);
   const webviewRef = useRef<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  // Estado para búsqueda integrada
+  const [searchResults, setSearchResults] = useState<GoogleSearchResult[]>([]);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Función para detectar si una consulta es una búsqueda (SOLO para input directo del usuario)
+  const isSearchQuery = (input: string): boolean => {
+    console.log('🔍 [DETECCIÓN] Analizando entrada:', input);
+    
+    // Si ya es una URL completa (tiene protocolo), NUNCA interceptar
+    if (input.startsWith('http://') || input.startsWith('https://')) {
+      console.log('🌐 [DETECCIÓN] Tiene protocolo - Es URL válida - NO interceptar');
+      return false;
+    }
+    
+    // Si parece un dominio (contiene punto sin espacios), probablemente es URL
+    if (input.includes('.') && !input.includes(' ')) {
+      console.log('🌐 [DETECCIÓN] Parece dominio - NO interceptar');
+      return false;
+    }
+    
+    // Si contiene espacios, definitivamente es búsqueda
+    if (input.includes(' ')) {
+      console.log('🔍 [DETECCIÓN] Contiene espacios - Es búsqueda - Interceptar');
+      return true;
+    }
+    
+    // Si no tiene puntos y no tiene espacios, probablemente es búsqueda de una palabra
+    if (!input.includes('.')) {
+      console.log('🔍 [DETECCIÓN] Una palabra sin dominio - Es búsqueda - Interceptar');
+      return true;
+    }
+    
+    // Por defecto, no interceptar para evitar falsos positivos
+    console.log('🌐 [DETECCIÓN] Por defecto NO interceptar');
+    return false;
+  };
+
+  // Función para realizar búsqueda integrada
+  const performIntegratedSearch = async (queryOrUrl: string) => {
+    let actualQuery = queryOrUrl.trim();
+    
+    // Si es una URL de motor de búsqueda, extraer la consulta
+    if (queryOrUrl.includes('google.com/search?q=')) {
+      const urlParams = new URLSearchParams(queryOrUrl.split('?')[1]);
+      actualQuery = urlParams.get('q') || queryOrUrl;
+    } else if (queryOrUrl.includes('duckduckgo.com/?q=')) {
+      const urlParams = new URLSearchParams(queryOrUrl.split('?')[1]);
+      actualQuery = urlParams.get('q') || queryOrUrl;
+    } else if (queryOrUrl.includes('bing.com/search?q=')) {
+      const urlParams = new URLSearchParams(queryOrUrl.split('?')[1]);
+      actualQuery = urlParams.get('q') || queryOrUrl;
+    }
+    
+    if (!actualQuery) return;
+    
+    console.log('🔍 Realizando búsqueda integrada:', {
+      original: queryOrUrl,
+      extracted: actualQuery
+    });
+    
+    setIsSearching(true);
+    setSearchQuery(actualQuery);
+    setIsSearchMode(true);
+    
+    try {
+      const results = await searchGoogle(actualQuery, { num: 10 });
+      setSearchResults(results);
+      
+      // Procesar resultados para analytics
+      await processSearchResults(actualQuery, results);
+      
+      console.log('✅ Búsqueda completada:', results.length, 'resultados');
+    } catch (error) {
+      console.error('❌ Error en búsqueda integrada:', error);
+      // En caso de error, mostrar resultados mock
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Función para manejar clic en resultado de búsqueda
+  const handleSearchResultClick = (result: GoogleSearchResult) => {
+    console.log('🎯 [RESULTADO] Navegando a resultado:', result.link);
+    
+    // Salir del modo búsqueda ANTES de navegar
+    setIsSearchMode(false);
+    setSearchResults([]);
+    setSearchQuery('');
+    
+    // Pequeño delay para asegurar que el estado se actualiza
+    setTimeout(() => {
+      if (activeTab) {
+        console.log('🎯 [RESULTADO] Navegando en pestaña activa:', activeTab.id);
+        navigateTab(activeTab.id, result.link);
+      } else {
+        console.log('🎯 [RESULTADO] Creando nueva pestaña');
+        createNewTab(result.link, result.title);
+      }
+    }, 100);
+  };
+
+  // Función para salir del modo búsqueda
+  const exitSearchMode = () => {
+    console.log('❌ [BÚSQUEDA] Saliendo del modo búsqueda');
+    setIsSearchMode(false);
+    setSearchResults([]);
+    setSearchQuery('');
+  };
 
   // Función para obtener URLs más compatibles con webview
   const getWebViewFriendlyUrl = (url: string): string => {
@@ -221,7 +336,28 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
 
   const handleNavigate = async (tabId: string, url: string) => {
     try {
-      console.log('🚀 [Koko-Web] Navegación detectada →', url);
+      console.log('🚀 [Koko-Web] Navegación detectada →', {
+        tabId,
+        url,
+        isSearchMode: isSearchMode,
+        activeTabId: activeTabId,
+        source: 'handleNavigate'
+      });
+      
+      // 🔍 VERIFICACIÓN CRÍTICA: Solo interceptar si realmente es una búsqueda sin formato
+      if (isSearchQuery(url)) {
+        console.log('🔍 BÚSQUEDA INTERCEPTADA:', url);
+        await performIntegratedSearch(url);
+        return; // ⚡ SALIR - No continuar con navegación normal
+      }
+      
+      console.log('🌐 NAVEGACIÓN NORMAL - NO interceptada:', url);
+      
+      // 🛑 BLOQUEO ADICIONAL: Si ya estamos en modo búsqueda, no navegar a menos que sea explícito
+      if (isSearchMode) {
+        console.log('🛑 Ya en modo búsqueda, ignorando navegación automática:', url);
+        return;
+      }
       
       // ⚡ VERIFICACIÓN PREVIA: Detectar dominios problemáticos ANTES de intentar cargar
       const problematicDomains = [
@@ -373,40 +509,97 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
 
   // Manejador para actualizar URL y título cuando el webview navega
   const handleUrlChange = (url: string, title?: string) => {
-    if (activeTab) {
-      // 🎵 BLOQUEO TOTAL para YouTube playlist: NO actualizar NADA
-      if (url.includes('youtube.com/watch') && activeTab.url.includes('youtube.com/watch')) {
-        console.log('🛑 YouTube playlist - BLOQUEANDO actualización completamente para evitar bucles');
-        console.log('🎵 YouTube maneja su propia navegación interna, NO interferir');
-        // NO hacer NADA - dejar que YouTube maneje todo internamente
-        return;
+    // FIX ULTRA AGRESIVO - SOLO CAMBIOS REALES
+    if (!activeTab || !url) return;
+    
+    // Función para normalizar URLs eliminando parámetros problemáticos
+    const normalizeUrl = (inputUrl: string): string => {
+      try {
+        const urlObj = new URL(inputUrl);
+        // Eliminar parámetros que causan bucles
+        urlObj.searchParams.delete('zx'); // Google timestamp parameter
+        urlObj.searchParams.delete('no_sw_cr'); // Google service worker parameter
+        urlObj.searchParams.delete('_t'); // Otros timestamps
+        urlObj.searchParams.delete('timestamp'); // Timestamps genéricos
+        return urlObj.toString();
+      } catch {
+        return inputUrl; // Si falla el parsing, usar URL original
       }
-      
-      // Para otras navegaciones (incluida primera carga de YouTube), proceder normalmente
-      const updates: any = { url };
-      if (title && title !== 'Sin título') {
-        updates.title = title;
-      }
-      updateTab(activeTab.id, updates);
-      console.log('🔄 URL actualizada:', { url, title, tabId: activeTab.id });
+    };
+    
+    const normalizedNewUrl = normalizeUrl(url);
+    const normalizedCurrentUrl = normalizeUrl(activeTab.url);
+    
+    console.log('🔄 [URL Change] Comparando URLs:', {
+      current: normalizedCurrentUrl,
+      new: normalizedNewUrl,
+      same: normalizedCurrentUrl === normalizedNewUrl
+    });
+    
+    // Verificación inteligente de cambio real
+    if (normalizedCurrentUrl === normalizedNewUrl) {
+      console.log('🚫 [URL Change] URLs normalizadas son iguales - Ignorando');
+      return;
     }
+    
+    // Bloqueo total YouTube playlists  
+    if (url.includes('youtube.com/watch') && activeTab.url.includes('youtube.com/watch')) {
+      console.log('🚫 [URL Change] Bloqueando cambio en YouTube playlist');
+      return; // NO actualizar nunca en playlists
+    }
+    
+    console.log('✅ [URL Change] Actualizando URL de pestaña');
+    // Actualización directa sin logs
+    updateTab(activeTab.id, { 
+      url, 
+      title: title || activeTab.title || 'Sin título' 
+    });
   };
 
   const renderWebContent = () => {
-    console.log('🎨 [DEBUG] Renderizando contenido web...');
-    console.log('🎨 [DEBUG] Estado completo:', {
-      totalTabs: tabs.length,
-      activeTabId,
-      activeTab: activeTab ? {
-        id: activeTab.id,
-        url: activeTab.url,
-        title: activeTab.title,
-        isLoading: activeTab.isLoading
-      } : null,
-      allTabs: tabs.map(t => ({ id: t.id, url: t.url, title: t.title })),
-      isElectron
-    });
-    
+    // 🔍 NUEVA FUNCIONALIDAD: Mostrar resultados de búsqueda integrada
+    if (isSearchMode) {
+      return (
+        <div className="search-results-container">
+          <div className="search-header">
+            <h2>🔍 Resultados para: "{searchQuery}"</h2>
+            <button onClick={exitSearchMode} className="exit-search-btn">
+              ✕ Volver al navegador
+            </button>
+          </div>
+          
+          {isSearching ? (
+            <div className="search-loading">
+              <div className="loading-spinner"></div>
+              <p>Buscando...</p>
+            </div>
+          ) : (
+            <div className="search-results">
+              {searchResults.length > 0 ? (
+                searchResults.map((result, index) => (
+                  <div 
+                    key={index} 
+                    className="search-result-item"
+                    onClick={() => handleSearchResultClick(result)}
+                  >
+                    <div className="result-url">{result.displayLink}</div>
+                    <h3 className="result-title">{result.title}</h3>
+                    <p className="result-snippet">{result.snippet}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="no-results">
+                  <p>No se encontraron resultados para "{searchQuery}"</p>
+                  <button onClick={exitSearchMode}>Volver al navegador</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Sin logs para evitar bucles - renderizado silencioso
     if (tabs.length === 0) {
       return (
         <div className="no-active-tab">
@@ -500,11 +693,20 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
                     title={tab.title}
                     onLoad={() => {
                       handleWebviewLoad(tab.id);
-                      // Solo sincronizar URL si es la pestaña activa
+                      // Solo sincronizar URL si es la pestaña activa Y hay un cambio real
                       if (isActive) {
                         const iframe = document.querySelector(`iframe[key="iframe-${tab.id}"]`) as HTMLIFrameElement;
                         if (iframe?.src && iframe.src !== tab.url) {
-                          handleUrlChange(iframe.src, tab.title);
+                          console.log('🔄 [IFRAME] URL sincronización detectada:', {
+                            iframeSrc: iframe.src,
+                            tabUrl: tab.url
+                          });
+                          // Solo actualizar si no es una URL problemática con parámetros dinámicos
+                          if (!iframe.src.includes('zx=') && !iframe.src.includes('no_sw_cr=')) {
+                            handleUrlChange(iframe.src, tab.title);
+                          } else {
+                            console.log('🚫 [IFRAME] Ignorando URL con parámetros dinámicos');
+                          }
                         }
                       }
                     }}
@@ -537,6 +739,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
         onTabClose={closeTab}
         onNewTab={handleNewTab}
         onNavigate={handleNavigate}
+        onSearch={performIntegratedSearch}
         onGoBack={handleGoBack}
         onGoForward={handleGoForward}
         onRefresh={handleRefresh}
@@ -545,6 +748,41 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
       />
 
       <div className="web-content">
+        {/* Overlay de modo búsqueda */}
+        {isSearchMode && (
+          <div className="search-overlay">
+            <div className="search-overlay-content">
+              <h3>🔍 Búsqueda Integrada</h3>
+              <p>Buscando: <strong>{searchQuery}</strong></p>
+              <div className="search-results-container">
+                {searchResults.length > 0 ? (
+                  <div className="search-results">
+                    {searchResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="search-result-item"
+                        onClick={() => handleSearchResultClick(result)}
+                      >
+                        <h4>{result.title}</h4>
+                        <p className="search-result-snippet">{result.snippet}</p>
+                        <span className="search-result-link">{result.link}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="search-loading">
+                    <div className="spinner"></div>
+                    <p>Cargando resultados...</p>
+                  </div>
+                )}
+              </div>
+              <button className="close-search-btn" onClick={exitSearchMode}>
+                ❌ Cerrar Búsqueda
+              </button>
+            </div>
+          </div>
+        )}
+        
         {renderWebContent()}
       </div>
 
@@ -564,6 +802,6 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
       )}
     </div>
   );
-};
+});
 
 export default SimpleKokoWeb;

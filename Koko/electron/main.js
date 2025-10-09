@@ -10,7 +10,9 @@ async function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: app.isPackaged 
+        ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.js')
+        : path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false, // Permite cargar contenido externo en webview
@@ -39,6 +41,8 @@ async function createWindow() {
   const isDev = !app.isPackaged; // Detectar si es desarrollo o producción
   
   console.log('🔍 Modo:', isDev ? 'Desarrollo' : 'Producción');
+  console.log('🔍 __dirname:', __dirname);
+  console.log('🔍 app.getAppPath():', app.getAppPath());
   
   if (isDev) {
     // Intentar diferentes puertos para desarrollo
@@ -63,7 +67,35 @@ async function createWindow() {
     // DevTools se pueden abrir manualmente con Ctrl+Shift+I o F12
     // win.webContents.openDevTools();
   } else {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
+    // En producción, buscar el archivo index.html en diferentes ubicaciones posibles
+    const possiblePaths = [
+      path.join(__dirname, '../dist/index.html'),
+      path.join(__dirname, 'dist/index.html'),
+      path.join(app.getAppPath(), 'dist/index.html'),
+      path.join(process.resourcesPath, 'dist/index.html')
+    ];
+    
+    let loaded = false;
+    for (const htmlPath of possiblePaths) {
+      try {
+        console.log('🔍 Intentando cargar:', htmlPath);
+        await win.loadFile(htmlPath);
+        console.log('✅ Archivo cargado exitosamente:', htmlPath);
+        loaded = true;
+        break;
+      } catch (error) {
+        console.log('❌ No se pudo cargar:', htmlPath, error.message);
+      }
+    }
+    
+    if (!loaded) {
+      console.error('❌ No se pudo cargar ningún archivo HTML');
+      // Como fallback, crear una página básica
+      win.loadURL('data:text/html,<html><body><h1>Error: No se pudo cargar la aplicación</h1><p>Por favor, contacta al soporte técnico.</p></body></html>');
+    }
+    
+    // DevTools deshabilitadas en producción
+    // win.webContents.openDevTools();
   }
 
   // Manejar navegación externa

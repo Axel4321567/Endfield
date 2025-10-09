@@ -71,14 +71,16 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
 
   // 🛡️ INTERCEPTAR URL ANTES DE CARGAR
   useEffect(() => {
-    console.log('🔍 VERIFICACIÓN INMEDIATA DE URL:', url);
+    // Reducir logs para evitar spam
+    if (Date.now() - (window as any).__lastUrlLog > 1000) {
+      console.log('🔍 Verificando URL:', url);
+      (window as any).__lastUrlLog = Date.now();
+    }
     
     if (checkForBlockedDomain(url)) {
       console.log('🛑 URL BLOQUEADA - NO CARGAR EN WEBVIEW');
       return; // No proceder con la configuración del webview
     }
-    
-    console.log('✅ URL PERMITIDA - PROCEDER CON WEBVIEW:', url);
     
   }, [url]); // Ejecutar cada vez que cambie la URL
 

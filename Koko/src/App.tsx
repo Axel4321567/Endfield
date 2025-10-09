@@ -29,7 +29,7 @@ function App() {
         onToggle={toggleSidebar}
       />
       <MainContent 
-        selectedOption={selectedOption} 
+        selectedOption={selectedOption}
         tabsManager={tabsManager}
       />
     </div>

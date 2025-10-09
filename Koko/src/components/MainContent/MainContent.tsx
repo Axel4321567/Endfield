@@ -25,13 +25,13 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
       {!selectedOption && (
         <div className="welcome-content">
           <h2 className="welcome-title">
-            Bienvenido a <span className="opera-accent">Koko</span>
+            Bienvenido a <span className="opera-accent">Koko Search</span>
           </h2>
           <p className="welcome-text">
-            Selecciona una opción del sidebar para comenzar
+            Tu motor de búsqueda personalizado está listo
           </p>
           <p className="welcome-info">
-            Opción seleccionada: {selectedOption || 'ninguna'}
+            Selecciona "Koko Search" para comenzar a buscar
           </p>
         </div>
       )}
