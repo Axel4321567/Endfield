@@ -1,5 +1,6 @@
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
+import UpdateChecker from './UpdateChecker';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -144,6 +145,11 @@ export const Dashboard = () => {
               </ol>
             </div>
           </div>
+        </div>
+
+        {/* Sección de Actualización del Sistema */}
+        <div className="update-section" style={{ marginBottom: '24px' }}>
+          <UpdateChecker />
         </div>
 
         <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>

@@ -564,6 +564,61 @@ ipcMain.handle('create-new-tab', (_, url, title) => {
 
 console.log('✅ [Koko] Manejador de nuevas pestañas activo');
 
+// 🔄 Manejadores para el sistema de actualización
+ipcMain.handle('system-update', async () => {
+  console.log('🚀 [System] Ejecutando actualización del sistema');
+  
+  const { exec } = await import('child_process');
+  const { promisify } = await import('util');
+  const execAsync = promisify(exec);
+  
+  try {
+    // Cambiar al directorio del proyecto
+    const projectDir = app.getAppPath();
+    console.log('📁 [System] Directorio del proyecto:', projectDir);
+    
+    // Ejecutar comandos de actualización
+    console.log('📥 [System] Descargando cambios...');
+    await execAsync('git fetch origin main', { cwd: projectDir });
+    
+    console.log('🔄 [System] Aplicando cambios...');
+    await execAsync('git reset --hard origin/main', { cwd: projectDir });
+    
+    console.log('📦 [System] Instalando dependencias...');
+    await execAsync('npm install', { cwd: projectDir });
+    
+    console.log('🏗️ [System] Construyendo aplicación...');
+    await execAsync('npm run build', { cwd: projectDir });
+    
+    console.log('✅ [System] Actualización completada exitosamente');
+    return { success: true, message: 'Actualización completada' };
+    
+  } catch (error) {
+    console.error('❌ [System] Error durante la actualización:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('system-restart', () => {
+  console.log('🔄 [System] Reiniciando aplicación...');
+  app.relaunch();
+  app.exit(0);
+});
+
+ipcMain.handle('system-info', () => {
+  console.log('📊 [System] Obteniendo información del sistema');
+  return {
+    platform: process.platform,
+    version: app.getVersion(),
+    electronVersion: process.versions.electron,
+    nodeVersion: process.versions.node,
+    appPath: app.getAppPath(),
+    userData: app.getPath('userData')
+  };
+});
+
+console.log('✅ [Koko] Manejadores de sistema activos');
+
 // Configuración adicional para desarrollo
 async function setupDevelopment() {
   if (process.env.NODE_ENV === 'development') {

@@ -101,6 +101,27 @@ contextBridge.exposeInMainWorld('electronAPI', {
       console.log('▶️ Autoplay habilitado');
       return true;
     }
+  },
+
+  // 🔄 Sistema de actualización de la aplicación
+  system: {
+    // Ejecutar actualización desde GitHub
+    executeUpdate: () => {
+      console.log('🚀 [System] Solicitando actualización de la aplicación');
+      return ipcRenderer.invoke('system-update');
+    },
+
+    // Reiniciar la aplicación
+    restartApp: () => {
+      console.log('🔄 [System] Solicitando reinicio de la aplicación');
+      return ipcRenderer.invoke('system-restart');
+    },
+
+    // Obtener información del sistema
+    getSystemInfo: () => {
+      console.log('📊 [System] Obteniendo información del sistema');
+      return ipcRenderer.invoke('system-info');
+    }
   }
 });
 
