@@ -154,6 +154,10 @@ electron-builder-output/
 # Electron cache
 electron/cache/
 electron-cache/
+cache/
+.cache/
+GPUCache/
+Code Cache/
 
 # Package Lock (si usas npm)
 package-lock.json

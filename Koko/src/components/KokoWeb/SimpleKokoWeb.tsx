@@ -69,6 +69,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [loadingTimeouts, setLoadingTimeouts] = useState<Map<string, number>>(new Map());
 
   // Función para detectar si una consulta es una búsqueda (SOLO para input directo del usuario)
   const isSearchQuery = (input: string): boolean => {
@@ -425,6 +426,9 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
         activeTabId
       });
       
+      // Establecer timeout de carga para evitar que se quede cargando indefinidamente
+      setLoadingTimeout(tabId);
+      
       // Si cambiamos la URL, actualizar el título también
       const title = friendlyUrl !== url ? 'Google (Optimizado)' : undefined;
       navigateTab(tabId, friendlyUrl, title);
@@ -499,12 +503,72 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   };
 
   const handleWebviewLoad = (tabId: string) => {
+    console.log('✅ [LOAD] Página cargada para pestaña:', tabId);
+    
+    // Limpiar timeout si existe
+    const timeoutId = loadingTimeouts.get(tabId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setLoadingTimeouts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(tabId);
+        return newMap;
+      });
+    }
+    
     updateTab(tabId, { isLoading: false });
+    
+    // Verificar que se actualizó correctamente
+    setTimeout(() => {
+      const tab = tabs.find(t => t.id === tabId);
+      if (tab?.isLoading) {
+        console.warn('⚠️ [LOAD] Estado isLoading no se actualizó, forzando actualización');
+        updateTab(tabId, { isLoading: false });
+      }
+    }, 100);
   };
 
   const handleWebviewError = (tabId: string, error: string) => {
     console.error(`❌ Error de carga: ${error}`);
+    
+    // Limpiar timeout si existe
+    const timeoutId = loadingTimeouts.get(tabId);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      setLoadingTimeouts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(tabId);
+        return newMap;
+      });
+    }
+    
     updateTab(tabId, { isLoading: false });
+  };
+
+  // Función para establecer timeout de carga
+  const setLoadingTimeout = (tabId: string) => {
+    // Limpiar timeout anterior si existe
+    const existingTimeout = loadingTimeouts.get(tabId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+    
+    // Establecer nuevo timeout de 10 segundos
+    const timeoutId = window.setTimeout(() => {
+      console.warn('⏰ [TIMEOUT] Forzando finalización de carga para pestaña:', tabId);
+      updateTab(tabId, { isLoading: false });
+      setLoadingTimeouts(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(tabId);
+        return newMap;
+      });
+    }, 10000); // 10 segundos timeout
+    
+    setLoadingTimeouts(prev => {
+      const newMap = new Map(prev);
+      newMap.set(tabId, timeoutId);
+      return newMap;
+    });
   };
 
   // Manejador para actualizar URL y título cuando el webview navega
@@ -692,6 +756,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
                     className="iframe-content"
                     title={tab.title}
                     onLoad={() => {
+                      console.log('🎯 [IFRAME] onLoad disparado para pestaña:', tab.id);
                       handleWebviewLoad(tab.id);
                       // Solo sincronizar URL si es la pestaña activa Y hay un cambio real
                       if (isActive) {
@@ -710,7 +775,10 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
                         }
                       }
                     }}
-                    onError={() => handleWebviewError(tab.id, 'Error de carga')}
+                    onError={() => {
+                      console.log('❌ [IFRAME] onError para pestaña:', tab.id);
+                      handleWebviewError(tab.id, 'Error de carga de iframe');
+                    }}
                   />
                   
                   {isActive && (
