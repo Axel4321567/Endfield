@@ -23,8 +23,8 @@ export const useTabs = (): TabsManager => {
       // Crear pestaña simple por defecto SIN cargar sesiones
       const defaultTab: Tab = {
         id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        title: 'Nueva pestaña',
-        url: '', // Vacía para mostrar SpeedDial
+        title: 'Google',
+        url: 'https://www.google.com', // Por defecto Google
         favicon: undefined,
         isLoading: false,
         canGoBack: false,
@@ -48,7 +48,7 @@ export const useTabs = (): TabsManager => {
     return;
   }, [state.tabs, state.activeTabId, isSessionRestored, sessionManager]);
 
-  const createNewTab = useCallback((url: string = '', title: string = 'Nueva pestaña') => {
+  const createNewTab = useCallback((url: string = 'https://www.google.com', title: string = 'Google') => {
     const newTab: Tab = {
       id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title,

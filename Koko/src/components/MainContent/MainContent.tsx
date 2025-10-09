@@ -17,7 +17,12 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
       </div>
       
       {/* SimpleKokoWeb - mantener siempre montado, solo ocultar/mostrar */}
-      <div style={{ display: selectedOption === 'koko-web' ? 'block' : 'none' }}>
+      <div style={{ 
+        display: selectedOption === 'koko-web' ? 'flex' : 'none',
+        flex: 1,
+        height: '100%',
+        width: '100%'
+      }}>
         <SimpleKokoWeb tabsManager={tabsManager} />
       </div>
       

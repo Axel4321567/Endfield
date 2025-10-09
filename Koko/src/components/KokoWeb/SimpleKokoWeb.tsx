@@ -6,7 +6,7 @@ import BookmarkManager from './components/BookmarkManager';
 import { searchGoogle } from '../../APIs/GoogleSearchAPI';
 import type { GoogleSearchResult } from '../../APIs/GoogleSearchAPI';
 import { processSearchResults } from '../../APIs/SearchAutomation';
-import type { TabsManager } from '../../types';
+import type { TabsManager, Tab } from '../../types';
 import './SimpleKokoWeb.css';
 
 interface SimpleKokoWebProps {
@@ -335,6 +335,24 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     }
   }, [activeTab?.url, activeTab?.id, isElectron, updateTab]);
 
+  // Efecto para escuchar eventos de nueva pestaña desde Electron
+  useEffect(() => {
+    if (!window.electronAPI) return;
+
+    const handleCreateNewTab = (url: string, title?: string) => {
+      console.log('🆕 [SimpleKokoWeb] Recibida solicitud de nueva pestaña:', { url, title });
+      createNewTab(url || 'https://www.google.com', title || 'Nueva Pestaña');
+    };
+
+    // Registrar el listener usando la API específica
+    window.electronAPI.navigation.onCreateNewTab(handleCreateNewTab);
+    
+    return () => {
+      // Limpiar el listener
+      window.electronAPI?.navigation.removeCreateNewTabListener();
+    };
+  }, [createNewTab]);
+
   const handleNavigate = async (tabId: string, url: string) => {
     try {
       console.log('🚀 [Koko-Web] Navegación detectada →', {
@@ -361,19 +379,13 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
       }
       
       // ⚡ VERIFICACIÓN PREVIA: Detectar dominios problemáticos ANTES de intentar cargar
-      const problematicDomains = [
-        'google.com', 'youtube.com', 'gmail.com',
-        'accounts.google.com', 'drive.google.com',
-        'docs.google.com', 'maps.google.com'
-      ];
+      // COMPLETAMENTE DESACTIVADO - No hay dominios problemáticos
       
-      const isProblematicDomain = problematicDomains.some(domain => url.includes(domain));
-      
-      if (isElectron && isProblematicDomain && window.electronAPI?.navigation?.openBrowserTab) {
+      if (false) { // DESACTIVADO: No abrir ventanas externas automáticamente
         console.log('🛑 DOMINIO PROBLEMÁTICO DETECTADO - Forzando ventana externa INMEDIATAMENTE:', url);
         
         try {
-          const result = await window.electronAPI.navigation.openBrowserTab(url);
+          const result = await window.electronAPI?.navigation.openBrowserTab(url);
           console.log('✅ Dominio problemático redirigido exitosamente:', result);
           
           // Actualizar la pestaña para mostrar que se abrió externamente
@@ -388,15 +400,15 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
         }
       }
       
-      // 🧠 Usar navegación inteligente si está disponible (Electron) - Para otros casos
-      if (isElectron && window.electronAPI?.navigation?.openBrowserTab) {
+      // 🧠 DESACTIVADO: No usar navegación inteligente automática
+      if (false) { // DESACTIVADO: Sistema de navegación inteligente
         console.log('🎯 Usando sistema de navegación inteligente para análisis adicional');
         
         try {
-          const result = await window.electronAPI.navigation.openBrowserTab(url);
+          const result = await window.electronAPI?.navigation.openBrowserTab(url);
           console.log('✅ Resultado de navegación inteligente:', result);
           
-          if (result.method === 'external-window') {
+          if (result?.method === 'external-window') {
             // La página se abrió en ventana externa
             updateTab(tabId, { 
               title: 'Abierto en ventana externa',
@@ -404,7 +416,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
               isLoading: false 
             });
             return;
-          } else if (result.method === 'internal-webview') {
+          } else if (result?.method === 'internal-webview') {
             // La página debe abrirse en el webview interno
             console.log('🔄 Redirigiendo a webview interno');
             // Continuar con la navegación normal
@@ -499,7 +511,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   };
 
   const handleNewTab = () => {
-    createNewTab('', 'Nueva pestaña');
+    createNewTab(); // Usa los valores por defecto (Google)
   };
 
   const handleWebviewLoad = (tabId: string) => {
@@ -520,7 +532,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     
     // Verificar que se actualizó correctamente
     setTimeout(() => {
-      const tab = tabs.find(t => t.id === tabId);
+      const tab = tabs.find((t: Tab) => t.id === tabId);
       if (tab?.isLoading) {
         console.warn('⚠️ [LOAD] Estado isLoading no se actualizó, forzando actualización');
         updateTab(tabId, { isLoading: false });
@@ -535,7 +547,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     const timeoutId = loadingTimeouts.get(tabId);
     if (timeoutId) {
       clearTimeout(timeoutId);
-      setLoadingTimeouts(prev => {
+      setLoadingTimeouts((prev: Map<string, number>) => {
         const newMap = new Map(prev);
         newMap.delete(tabId);
         return newMap;
@@ -557,14 +569,14 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     const timeoutId = window.setTimeout(() => {
       console.warn('⏰ [TIMEOUT] Forzando finalización de carga para pestaña:', tabId);
       updateTab(tabId, { isLoading: false });
-      setLoadingTimeouts(prev => {
+      setLoadingTimeouts((prev: Map<string, number>) => {
         const newMap = new Map(prev);
         newMap.delete(tabId);
         return newMap;
       });
     }, 10000); // 10 segundos timeout
     
-    setLoadingTimeouts(prev => {
+    setLoadingTimeouts((prev: Map<string, number>) => {
       const newMap = new Map(prev);
       newMap.set(tabId, timeoutId);
       return newMap;

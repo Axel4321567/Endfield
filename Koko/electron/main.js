@@ -14,11 +14,29 @@ const cacheDir = path.join(userData, 'cache');
 app.setPath('userData', userData);
 app.setPath('cache', cacheDir);
 
-// Configuración adicional para evitar errores de cache
+// Configuración adicional para compatibilidad con Google
 app.commandLine.appendSwitch('--disable-http-cache');
 app.commandLine.appendSwitch('--disable-gpu-process-crash-limit');
 app.commandLine.appendSwitch('--no-sandbox');
-app.commandLine.appendSwitch('--disable-web-security');
+app.commandLine.appendSwitch('--disable-features', 'VizDisplayCompositor');
+app.commandLine.appendSwitch('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+// Configuraciones adicionales para reducir errores de base de datos
+app.commandLine.appendSwitch('--disable-background-timer-throttling');
+app.commandLine.appendSwitch('--disable-backgrounding-occluded-windows');
+app.commandLine.appendSwitch('--disable-renderer-backgrounding');
+app.commandLine.appendSwitch('--disable-extensions');
+app.commandLine.appendSwitch('--disable-default-apps');
+app.commandLine.appendSwitch('--disable-sync');
+app.commandLine.appendSwitch('--disable-background-networking');
+app.commandLine.appendSwitch('--disable-component-update');
+
+// Configuraciones específicas para bases de datos
+app.commandLine.appendSwitch('--disable-databases');
+app.commandLine.appendSwitch('--disable-local-storage');
+app.commandLine.appendSwitch('--disable-session-storage');
+app.commandLine.appendSwitch('--enable-logging');
+app.commandLine.appendSwitch('--log-level', '3'); // Solo errores críticos
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -30,8 +48,8 @@ async function createWindow() {
         : path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false, // Permite cargar contenido externo en webview
-      allowRunningInsecureContent: true,
+      webSecurity: true, // Habilitar seguridad web para compatibilidad con Google
+      allowRunningInsecureContent: false,
       webviewTag: true, // Habilitar webview tags
       experimentalFeatures: true,
       enableRemoteModule: false,
@@ -116,9 +134,13 @@ async function createWindow() {
     // win.webContents.openDevTools();
   }
 
-  // Manejar navegación externa
+  // Manejar navegación externa - crear nueva pestaña en lugar de ventana externa
   win.webContents.setWindowOpenHandler(({ url }) => {
-    import('electron').then(({ shell }) => shell.openExternal(url));
+    console.log('🆕 [Koko] Solicitando nueva pestaña para:', url);
+    
+    // Enviar solicitud para crear nueva pestaña en lugar de abrir externamente
+    win.webContents.send('create-new-tab', url, 'Nueva Pestaña');
+    
     return { action: 'deny' };
   });
 }
@@ -128,13 +150,18 @@ app.whenReady().then(async () => {
   // Configurar cache y sesión para evitar errores de permisos
   const ses = session.defaultSession;
   
-  // Configurar cache de manera más específica
-  await ses.clearCache();
-  await ses.clearStorageData({
-    storages: ['appcache', 'cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers']
-  });
-  
-  console.log('🧹 Cache limpiado para evitar errores de permisos');
+  try {
+    // Configurar cache de manera más específica y controlada
+    await ses.clearCache();
+    await ses.clearStorageData({
+      storages: ['cookies', 'filesystem', 'shadercache', 'websql'],
+      quotas: ['temporary', 'persistent', 'syncable']
+    });
+    
+    console.log('🧹 Cache limpiado para evitar errores de permisos');
+  } catch (error) {
+    console.warn('⚠️ No se pudo limpiar completamente el cache:', error.message);
+  }
   
   // Habilitar webview tags y configurar permisos
 
@@ -389,8 +416,8 @@ ipcMain.handle('app-get-status', () => {
   };
 });
 
-// 🧠 Sistema de navegación inteligente - Maneja ERR_ABORTED automáticamente
-ipcMain.handle('open-browser-tab', (_, url) => {
+// 🧠 Sistema de navegación inteligente - Maneja ERR_ABORTED automáticamente - DESHABILITADO
+/* ipcMain.handle('open-browser-tab', (_, url) => {
   console.log('🎯 [Koko] Analizando navegación para:', url);
   
   // Dominios que tienden a fallar con ERR_ABORTED en webview
@@ -465,109 +492,61 @@ ipcMain.handle('open-browser-tab', (_, url) => {
     return { success: true, method: 'internal-webview', url };
   }
 });
+*/
 
-console.log('✅ [Koko] Manejador de navegación inteligente activo');
+console.log('✅ [Koko] Manejador de navegación inteligente DESHABILITADO');
 
-// 🚀 Manejador específico para dominios bloqueados (Prompt Maestro)
-ipcMain.handle('open-external-page', async (_, url) => {
-  console.log('🚀 [Koko] Abriendo página externa para dominio bloqueado:', url);
+console.log('✅ [Koko] Manejador de páginas externas DESHABILITADO (Prompt Maestro)');
+
+// � Manejador simple para navegación en webview (reemplazo simplificado)
+ipcMain.handle('webview-navigate', (_, url) => {
+  console.log('🌐 [Koko] Navegación simple en webview:', url);
   
-  try {
-    // Detectar dominios que requieren ventana externa
-    const blockedDomains = [
-      'google.com', 'youtube.com', 'gmail.com', 'maps.google.com',
-      'accounts.google.com', 'drive.google.com', 'docs.google.com',
-      'sheets.google.com', 'slides.google.com', 'photos.google.com',
-      'calendar.google.com', 'translate.google.com', 'play.google.com',
-      'cloud.google.com', 'firebase.google.com', 'android.com'
-    ];
-    
-    const shouldOpenExternal = blockedDomains.some(domain => 
-      url.includes(domain) || url.includes(`www.${domain}`)
-    );
-    
-    if (shouldOpenExternal) {
-      // Crear nueva ventana BrowserWindow para dominio bloqueado
-      const externalWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true,
-          enableRemoteModule: false,
-          webSecurity: true,
-          allowRunningInsecureContent: false,
-          plugins: true
-        },
-        icon: path.join(__dirname, '../src-tauri/icons/icon.png'),
-        title: 'Koko Browser - Ventana Externa',
-        show: false
-      });
-      
-      // Configurar permisos para YouTube y multimedia
-      externalWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
-        const allowedPermissions = [
-          'media', 'camera', 'microphone', 'notifications', 
-          'geolocation', 'midi', 'midiSysex', 'pointerLock',
-          'fullscreen', 'openExternal', 'background-sync',
-          'display-capture', 'clipboard-read', 'clipboard-write'
-        ];
-        callback(allowedPermissions.includes(permission));
-      });
-      
-      // Configurar headers para compatibilidad con Google
-      externalWindow.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
-        details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-        details.requestHeaders['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
-        details.requestHeaders['Accept-Language'] = 'en-US,en;q=0.5';
-        details.requestHeaders['Accept-Encoding'] = 'gzip, deflate, br';
-        details.requestHeaders['DNT'] = '1';
-        details.requestHeaders['Connection'] = 'keep-alive';
-        details.requestHeaders['Upgrade-Insecure-Requests'] = '1';
-        callback({ requestHeaders: details.requestHeaders });
-      });
-      
-      // Cargar URL y mostrar ventana
-      await externalWindow.loadURL(url);
-      externalWindow.show();
-      externalWindow.focus();
-      
-      console.log('✅ [Koko] Ventana externa creada exitosamente para:', url);
-      return { 
-        success: true, 
-        method: 'external-window', 
-        url,
-        windowId: externalWindow.id,
-        reason: 'Dominio bloqueado - requiere ventana externa'
-      };
-    } else {
-      // Si no es dominio bloqueado, usar webview normal
-      const mainWin = BrowserWindow.getFocusedWindow();
-      if (mainWin) {
-        mainWin.webContents.send('navigate-in-webview', url);
-        console.log('✅ [Koko] Navegación interna para:', url);
-        return { 
-          success: true, 
-          method: 'internal-webview', 
-          url,
-          reason: 'Dominio permitido en webview'
-        };
-      }
-    }
-    
-  } catch (error) {
-    console.error('❌ [Koko] Error al abrir página externa:', error);
-    return { 
-      success: false, 
-      error: error.message, 
-      url 
-    };
+  // Simplemente enviar al webview principal para navegación interna
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('navigate-in-webview', url);
+    console.log('✅ [Koko] Navegación enviada al webview principal');
+    return { success: true, method: 'internal-webview', url };
+  } else {
+    console.error('❌ [Koko] No se encontró ventana principal para navegación');
+    return { success: false, error: 'No main window found' };
   }
 });
 
-console.log('✅ [Koko] Manejador de páginas externas activo (Prompt Maestro)');
+// 🚀 Manejador para open-browser-tab (simplificado para navegación interna)
+ipcMain.handle('open-browser-tab', (_, url) => {
+  console.log('🚀 [Koko] Abriendo URL en webview interno:', url);
+  
+  // Siempre usar navegación interna, sin ventanas externas
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('navigate-in-webview', url);
+    console.log('✅ [Koko] URL cargada en webview interno');
+    return { success: true, method: 'internal-webview', url };
+  } else {
+    console.error('❌ [Koko] No se encontró ventana principal');
+    return { success: false, error: 'No main window found' };
+  }
+});
 
-// 🆕 Manejador para crear nuevas pestañas desde webview
+// 🚀 Manejador para open-external-page (simplificado para navegación interna)
+ipcMain.handle('open-external-page', (_, url) => {
+  console.log('🚀 [Koko] Abriendo página en webview interno (antes externa):', url);
+  
+  // Siempre usar navegación interna, sin ventanas externas
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('navigate-in-webview', url);
+    console.log('✅ [Koko] Página cargada en webview interno');
+    return { success: true, method: 'internal-webview', url };
+  } else {
+    console.error('❌ [Koko] No se encontró ventana principal');
+    return { success: false, error: 'No main window found' };
+  }
+});
+
+// �🆕 Manejador para crear nuevas pestañas desde webview
 ipcMain.handle('create-new-tab', (_, url, title) => {
   console.log('🆕 [Koko] Solicitud de nueva pestaña desde webview:', { url, title });
   
@@ -600,6 +579,28 @@ async function setupDevelopment() {
     }
   }
 }
+
+// Manejo de errores no capturados para evitar crashes por errores de base de datos
+process.on('uncaughtException', (error) => {
+  if (error.message.includes('quota database') || 
+      error.message.includes('Database IO error') || 
+      error.message.includes('storage')) {
+    console.warn('⚠️ Error de almacenamiento ignorado:', error.message);
+  } else {
+    console.error('❌ Error no capturado:', error);
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  if (reason && reason.toString().includes('quota') || 
+      reason && reason.toString().includes('storage')) {
+    console.warn('⚠️ Promesa rechazada de almacenamiento ignorada:', reason);
+  } else {
+    console.error('❌ Promesa rechazada no manejada en:', promise, 'razón:', reason);
+  }
+});
+
+console.log('✅ [Koko] Manejadores de error configurados');
 
 // Inicializar desarrollo
 setupDevelopment();

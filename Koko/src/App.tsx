@@ -5,7 +5,7 @@ import { useTabs } from './hooks/useTabs';
 import './App.css';
 
 function App() {
-  const [selectedOption, setSelectedOption] = useState<string | null>('dashboard');
+  const [selectedOption, setSelectedOption] = useState<string | null>('koko-web');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Estado global de pestañas para persistir entre navegación del sidebar

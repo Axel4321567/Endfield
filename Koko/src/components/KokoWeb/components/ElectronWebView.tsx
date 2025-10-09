@@ -32,41 +32,8 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
   const checkForBlockedDomain = (targetUrl: string) => {
     if (!targetUrl) return false;
     
-    // 🚫 DESACTIVADO: Permitir que Google funcione normalmente en webview
-    const blockedDomains: string[] = [
-      // 'google.com', 'youtube.com', 'gmail.com', 'maps.google.com',
-      // 'accounts.google.com', 'drive.google.com', 'docs.google.com',
-      // 'sheets.google.com', 'slides.google.com', 'photos.google.com',
-      // 'calendar.google.com', 'translate.google.com', 'play.google.com',
-      // 'cloud.google.com', 'firebase.google.com', 'android.com'
-    ];
-    
-    const isBlocked = blockedDomains.some(domain => 
-      targetUrl.includes(domain) || targetUrl.includes(`www.${domain}`)
-    );
-    
-    if (isBlocked) {
-      console.log('🚫 DOMINIO BLOQUEADO DETECTADO INMEDIATAMENTE:', targetUrl);
-      console.log('🚀 INTERCEPTANDO ANTES DE CARGAR EN WEBVIEW...');
-      
-      isBlockedDomainRef.current = true;
-      
-      if (window.electronAPI?.navigation?.openExternalPage) {
-        window.electronAPI.navigation.openExternalPage(targetUrl)
-          .then((result: any) => {
-            console.log('✅ Dominio bloqueado abierto inmediatamente en ventana externa:', result);
-            setStatus(`Abierto automáticamente en ventana externa: ${new URL(targetUrl).hostname}`);
-          })
-          .catch((error: any) => {
-            console.error('❌ Error abriendo dominio bloqueado inmediatamente:', error);
-            setStatus('Error en apertura automática');
-          });
-      }
-      return true; // Dominio bloqueado detectado
-    }
-    
-    isBlockedDomainRef.current = false;
-    return false; // Dominio permitido
+    // 🚫 COMPLETAMENTE DESACTIVADO: Permitir que todos los dominios funcionen en webview
+    return false; // Siempre permitir todos los dominios
   };
 
   // 🛡️ INTERCEPTAR URL ANTES DE CARGAR
@@ -181,9 +148,9 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
         console.log('🚨 ERR_BLOCKED_BY_RESPONSE en Google - intentando navegación inteligente...');
         
         // Usar navegación inteligente también para ERR_BLOCKED_BY_RESPONSE
-        if (retryCountRef.current === 1 && window.electronAPI?.navigation?.openBrowserTab) {
+        if (false) { // DESACTIVADO: No usar navegación inteligente automática
           console.log('🎯 Usando navegación inteligente para ERR_BLOCKED_BY_RESPONSE');
-          window.electronAPI.navigation.openBrowserTab(currentUrl);
+          window.electronAPI?.navigation.openBrowserTab(currentUrl);
           return;
         }
         
