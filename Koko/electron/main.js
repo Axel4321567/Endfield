@@ -10,7 +10,9 @@ async function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: app.isPackaged 
+        ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.js')
+        : path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       webSecurity: false, // Permite cargar contenido externo en webview
