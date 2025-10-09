@@ -36,8 +36,14 @@ export const useSessionManager = () => {
   // Guardar sesión en localStorage
   const saveSession = (sessionData: BrowserSession) => {
     try {
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-      console.log('💾 Sesión guardada en localStorage:', sessionData);
+      const sessionString = JSON.stringify(sessionData);
+      const currentSaved = localStorage.getItem(SESSION_STORAGE_KEY);
+      
+      // Solo guardar si los datos han cambiado realmente
+      if (currentSaved !== sessionString) {
+        localStorage.setItem(SESSION_STORAGE_KEY, sessionString);
+        console.log('💾 Sesión guardada en localStorage');
+      }
     } catch (error) {
       console.error('❌ Error al guardar sesión:', error);
     }

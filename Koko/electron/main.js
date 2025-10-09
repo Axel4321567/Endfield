@@ -94,8 +94,8 @@ async function createWindow() {
       win.loadURL('data:text/html,<html><body><h1>Error: No se pudo cargar la aplicación</h1><p>Por favor, contacta al soporte técnico.</p></body></html>');
     }
     
-    // Habilitar DevTools en producción para debugging
-    win.webContents.openDevTools();
+    // DevTools deshabilitadas en producción
+    // win.webContents.openDevTools();
   }
 
   // Manejar navegación externa

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Tab, TabsManager } from '../types';
 import { useSessionManager } from './useSessionManager';
 
@@ -16,6 +16,7 @@ export const useTabs = (): TabsManager => {
     activeTabId: null
   });
   const [isSessionRestored, setIsSessionRestored] = useState(false);
+  const lastSavedStateRef = useRef<string | null>(null);
 
   // Restaurar sesión al inicializar
   useEffect(() => {
@@ -68,23 +69,39 @@ export const useTabs = (): TabsManager => {
     }
   }, [isSessionRestored, sessionManager]);
 
-  // Guardar sesión cuando cambian las pestañas (con debounce para YouTube)
+  // Guardar sesión cuando cambian las pestañas (con debounce para YouTube y prevención de bucles)
   useEffect(() => {
     if (isSessionRestored && state.tabs.length > 0) {
+      // Crear hash del estado actual para evitar guardado duplicado
+      const currentStateHash = JSON.stringify({
+        tabs: state.tabs.map(tab => ({ id: tab.id, url: tab.url, title: tab.title })),
+        activeTabId: state.activeTabId
+      });
+      
+      // Solo guardar si el estado ha cambiado realmente
+      if (lastSavedStateRef.current === currentStateHash) {
+        console.log('⏭️ Estado sin cambios, omitiendo guardado de sesión');
+        return;
+      }
+      
       // Debounce para YouTube: evitar guardado excesivo durante playlist
       const isYouTubeTab = state.tabs.some(tab => tab.url.includes('youtube.com/watch'));
       
       if (isYouTubeTab) {
         console.log('🎵 YouTube detectado - guardado con delay para evitar spam');
         const timeoutId = setTimeout(() => {
-          console.log('💾 Guardando sesión YouTube (delayed)...');
-          sessionManager.updateSession(state.tabs, state.activeTabId);
-        }, 1000); // 1 segundo de delay
+          if (lastSavedStateRef.current !== currentStateHash) {
+            console.log('💾 Guardando sesión YouTube (delayed)...');
+            sessionManager.updateSession(state.tabs, state.activeTabId);
+            lastSavedStateRef.current = currentStateHash;
+          }
+        }, 2000); // 2 segundos de delay para YouTube
         
         return () => clearTimeout(timeoutId);
       } else {
         console.log('💾 Guardando sesión automáticamente...');
         sessionManager.updateSession(state.tabs, state.activeTabId);
+        lastSavedStateRef.current = currentStateHash;
       }
     }
   }, [state.tabs, state.activeTabId, isSessionRestored, sessionManager]);
