@@ -374,6 +374,15 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
   // Manejador para actualizar URL y título cuando el webview navega
   const handleUrlChange = (url: string, title?: string) => {
     if (activeTab) {
+      // 🎵 BLOQUEO TOTAL para YouTube playlist: NO actualizar NADA
+      if (url.includes('youtube.com/watch') && activeTab.url.includes('youtube.com/watch')) {
+        console.log('🛑 YouTube playlist - BLOQUEANDO actualización completamente para evitar bucles');
+        console.log('🎵 YouTube maneja su propia navegación interna, NO interferir');
+        // NO hacer NADA - dejar que YouTube maneje todo internamente
+        return;
+      }
+      
+      // Para otras navegaciones (incluida primera carga de YouTube), proceder normalmente
       const updates: any = { url };
       if (title && title !== 'Sin título') {
         updates.title = title;
@@ -455,6 +464,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = ({ tabsManager }) => 
                 }}
               >
                 <ElectronWebView
+                  key={tab.url.includes('youtube.com/watch') ? `youtube-${tab.id}` : `webview-${tab.id}-${tab.url}`}
                   url={tab.url}
                   setStatus={() => {}}
                   onUrlChange={(url, title) => {

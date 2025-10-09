@@ -68,11 +68,24 @@ export const useTabs = (): TabsManager => {
     }
   }, [isSessionRestored, sessionManager]);
 
-  // Guardar sesión cuando cambian las pestañas
+  // Guardar sesión cuando cambian las pestañas (con debounce para YouTube)
   useEffect(() => {
     if (isSessionRestored && state.tabs.length > 0) {
-      console.log('💾 Guardando sesión automáticamente...');
-      sessionManager.updateSession(state.tabs, state.activeTabId);
+      // Debounce para YouTube: evitar guardado excesivo durante playlist
+      const isYouTubeTab = state.tabs.some(tab => tab.url.includes('youtube.com/watch'));
+      
+      if (isYouTubeTab) {
+        console.log('🎵 YouTube detectado - guardado con delay para evitar spam');
+        const timeoutId = setTimeout(() => {
+          console.log('💾 Guardando sesión YouTube (delayed)...');
+          sessionManager.updateSession(state.tabs, state.activeTabId);
+        }, 1000); // 1 segundo de delay
+        
+        return () => clearTimeout(timeoutId);
+      } else {
+        console.log('💾 Guardando sesión automáticamente...');
+        sessionManager.updateSession(state.tabs, state.activeTabId);
+      }
     }
   }, [state.tabs, state.activeTabId, isSessionRestored, sessionManager]);
 
