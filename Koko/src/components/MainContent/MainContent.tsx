@@ -1,5 +1,4 @@
 import SimpleKokoWeb from '../KokoWeb/SimpleKokoWeb';
-import OperaStyleBrowser from '../KokoWeb/OperaStyleBrowser';
 import { Dashboard } from '../Dashboard/Dashboard';
 import type { TabsManager } from '../../types';
 import './MainContent.css';
@@ -20,11 +19,6 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
       {/* SimpleKokoWeb - mantener siempre montado, solo ocultar/mostrar */}
       <div style={{ display: selectedOption === 'koko-web' ? 'block' : 'none' }}>
         <SimpleKokoWeb tabsManager={tabsManager} />
-      </div>
-      
-      {/* Opera Style Browser - nuevo navegador estilo Opera */}
-      <div style={{ display: selectedOption === 'opera-style' ? 'block' : 'none' }}>
-        <OperaStyleBrowser tabsManager={tabsManager} />
       </div>
       
       {/* Contenido de bienvenida - solo cuando no hay selección */}

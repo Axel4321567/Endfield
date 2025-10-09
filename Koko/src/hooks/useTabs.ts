@@ -69,12 +69,8 @@ export const useTabs = (): TabsManager => {
     }
   }, [isSessionRestored, sessionManager]);
 
-  // Guardar sesión cuando cambian las pestañas (TEMPORALMENTE DESHABILITADO para debug)
+  // Guardar sesión cuando cambian las pestañas (REHABILITADO con protecciones)
   useEffect(() => {
-    // DESHABILITADO TEMPORALMENTE PARA DEBUGGING DE BUCLES
-    console.log('⚠️ [DEBUG] Sistema de sesiones DESHABILITADO para detectar bucles');
-    return;
-    
     if (isSessionRestored && state.tabs.length > 0) {
       // Crear hash del estado actual para evitar guardado duplicado
       const currentStateHash = JSON.stringify({
@@ -99,7 +95,7 @@ export const useTabs = (): TabsManager => {
             sessionManager.updateSession(state.tabs, state.activeTabId);
             lastSavedStateRef.current = currentStateHash;
           }
-        }, 2000); // 2 segundos de delay para YouTube
+        }, 3000); // 3 segundos de delay para YouTube
         
         return () => clearTimeout(timeoutId);
       } else {
