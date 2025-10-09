@@ -69,8 +69,12 @@ export const useTabs = (): TabsManager => {
     }
   }, [isSessionRestored, sessionManager]);
 
-  // Guardar sesión cuando cambian las pestañas (con debounce para YouTube y prevención de bucles)
+  // Guardar sesión cuando cambian las pestañas (TEMPORALMENTE DESHABILITADO para debug)
   useEffect(() => {
+    // DESHABILITADO TEMPORALMENTE PARA DEBUGGING DE BUCLES
+    console.log('⚠️ [DEBUG] Sistema de sesiones DESHABILITADO para detectar bucles');
+    return;
+    
     if (isSessionRestored && state.tabs.length > 0) {
       // Crear hash del estado actual para evitar guardado duplicado
       const currentStateHash = JSON.stringify({
