@@ -9,6 +9,7 @@ export interface DatabaseStatus {
   status: 'running' | 'stopped' | 'installing' | 'error' | 'unknown';
   installed: boolean;
   version?: string;
+  serviceName?: string;
   uptime?: number;
   error?: string;
 }
@@ -138,17 +139,36 @@ export class DatabaseService {
     }
 
     try {
-      console.log('▶️ [DatabaseService] Iniciando servicio MariaDB...');
-      const result = await window.electronAPI!.database!.start();
+      console.log('▶️ [DatabaseService] === INICIANDO startService ===');
+      console.log('▶️ [DatabaseService] Verificando APIs...');
+      
+      if (!window.electronAPI?.database?.start) {
+        throw new Error('API start no disponible');
+      }
+      
+      console.log('▶️ [DatabaseService] Llamando a window.electronAPI.database.start()...');
+      const result = await window.electronAPI.database.start();
+      
+      console.log('📥 [DatabaseService] === RESPUESTA DE START ===');
+      console.log('📥 [DatabaseService] result:', result);
+      console.log('📥 [DatabaseService] Tipo:', typeof result);
+      console.log('📥 [DatabaseService] JSON:', JSON.stringify(result, null, 2));
+      
+      if (!result) {
+        console.error('❌ [DatabaseService] Respuesta undefined del backend');
+        throw new Error('Respuesta undefined del backend de start');
+      }
       
       if (result.success) {
         console.log('✅ [DatabaseService] Servicio iniciado correctamente');
         this.clearStatusCache();
+        return result;
       } else {
-        console.error('❌ [DatabaseService] Error al iniciar servicio:', result.error);
+        // Manejar tanto 'error' como 'message' para compatibilidad
+        const errorMessage = result.error || result.message || 'Error desconocido';
+        console.error('❌ [DatabaseService] Error al iniciar servicio:', errorMessage);
+        return { success: false, error: errorMessage };
       }
-      
-      return result;
     } catch (error) {
       console.error('❌ [DatabaseService] Error al iniciar servicio:', error);
       return { 
@@ -228,17 +248,48 @@ export class DatabaseService {
    */
   private async fetchStatus(): Promise<DatabaseStatus> {
     try {
-      console.log('📊 [Database] Obteniendo estado del servicio...');
+      console.log('� [DatabaseService] === INICIANDO fetchStatus ===');
+      console.log('�📊 [DatabaseService] Obteniendo estado del servicio...');
       
       // Verificar que la API esté disponible
-      if (!window.electronAPI?.database?.getStatus) {
-        throw new Error('API de base de datos no disponible');
+      if (!window.electronAPI) {
+        console.error('❌ [DatabaseService] window.electronAPI no está disponible');
+        throw new Error('Electron API no disponible');
       }
       
+      if (!window.electronAPI.database) {
+        console.error('❌ [DatabaseService] window.electronAPI.database no está disponible');
+        throw new Error('Database API no disponible');
+      }
+      
+      if (!window.electronAPI.database.getStatus) {
+        console.error('❌ [DatabaseService] window.electronAPI.database.getStatus no está disponible');
+        throw new Error('getStatus API no disponible');
+      }
+      
+      console.log('✅ [DatabaseService] APIs disponibles, ejecutando llamada IPC...');
       const result = await window.electronAPI.database.getStatus();
+      
+      // Log detallado para debug
+      console.log('� [DatabaseService] === RESPUESTA RECIBIDA ===');
+      console.log('🔍 [DatabaseService] Tipo de respuesta:', typeof result);
+      console.log('�🔍 [DatabaseService] Respuesta raw completa:', result);
+      console.log('🔍 [DatabaseService] JSON.stringify:', JSON.stringify(result, null, 2));
+      
+      // Verificar propiedades específicas
+      if (result) {
+        console.log('🔍 [DatabaseService] Propiedades individuales:');
+        console.log('  - success:', result.success, '(tipo:', typeof result.success, ')');
+        console.log('  - installed:', result.installed, '(tipo:', typeof result.installed, ')');
+        console.log('  - status:', result.status, '(tipo:', typeof result.status, ')');
+        console.log('  - version:', result.version, '(tipo:', typeof result.version, ')');
+        console.log('  - serviceName:', result.serviceName, '(tipo:', typeof result.serviceName, ')');
+        console.log('  - error:', result.error, '(tipo:', typeof result.error, ')');
+      }
       
       // Validar que el resultado no sea undefined o null
       if (!result) {
+        console.error('❌ [DatabaseService] La API retornó un resultado vacío');
         throw new Error('La API retornó un resultado vacío');
       }
       
@@ -247,14 +298,19 @@ export class DatabaseService {
         success: result.success ?? false,
         status: result.status || 'unknown',
         installed: result.installed ?? false,
-        error: result.error || undefined,
         version: result.version || undefined,
-        uptime: result.uptime || undefined
+        serviceName: result.serviceName || undefined,
+        uptime: result.uptime || undefined,
+        error: result.error || undefined
       };
+      
+      console.log('✅ [DatabaseService] === RESULTADO VALIDADO ===');
+      console.log('🔍 [DatabaseService] Resultado final:', JSON.stringify(validatedResult, null, 2));
       
       // Actualizar cache
       this.statusCache = validatedResult;
       this.statusCacheTime = Date.now();
+      console.log('💾 [DatabaseService] Cache actualizado');
       
       return validatedResult;
     } catch (error) {
@@ -339,13 +395,15 @@ export class DatabaseService {
   }
 
   /**
-   * Limpiar el cache de estado
+   * Limpiar el cache de estado - método público para forzar actualización
    */
-  private clearStatusCache(): void {
+  public clearStatusCache(): void {
     this.statusCache = null;
     this.statusCacheTime = 0;
     this.pendingStatusRequest = null;
   }
+
+
 
   /**
    * Verificar si la base de datos está lista para usar

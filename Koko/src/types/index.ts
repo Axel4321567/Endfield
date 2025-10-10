@@ -105,6 +105,7 @@ declare global {
           status: 'running' | 'stopped' | 'installing' | 'error' | 'unknown';
           installed: boolean;
           version?: string;
+          serviceName?: string;
           uptime?: number;
           error?: string;
         }>;
@@ -129,6 +130,9 @@ declare global {
           }>;
           error?: string;
         }>;
+        // Listeners para eventos de progreso
+        onDownloadProgress: (callback: (progressData: { progress: number; phase: string }) => void) => void;
+        removeDownloadProgressListener: () => void;
       };
     };
   }

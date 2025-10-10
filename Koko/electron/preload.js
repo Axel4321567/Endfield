@@ -192,8 +192,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Obtener estado del servicio
     getStatus: () => {
-      console.log('📊 [Database] Obteniendo estado del servicio...');
-      return ipcRenderer.invoke('database-status');
+      console.log('📊 [Preload] === INICIANDO database.getStatus ===');
+      console.log('📊 [Preload] Llamando ipcRenderer.invoke("database-status")');
+      
+      const promise = ipcRenderer.invoke('database-status');
+      
+      promise.then(result => {
+        console.log('✅ [Preload] === RESPUESTA RECIBIDA ===');
+        console.log('📥 [Preload] Respuesta del main process:', result);
+        console.log('📥 [Preload] Tipo:', typeof result);
+        console.log('📥 [Preload] JSON.stringify:', JSON.stringify(result, null, 2));
+      }).catch(error => {
+        console.error('❌ [Preload] Error en llamada IPC:', error);
+      });
+      
+      return promise;
     },
 
     // Abrir HeidiSQL
@@ -212,6 +225,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     runDiagnostics: () => {
       console.log('🔍 [Database] Ejecutando diagnósticos del sistema...');
       return ipcRenderer.invoke('database-diagnostics');
+    },
+
+    // Listeners para eventos de progreso
+    onDownloadProgress: (callback) => {
+      ipcRenderer.on('database-download-progress', (event, progressData) => {
+        callback(progressData);
+      });
+    },
+
+    removeDownloadProgressListener: () => {
+      ipcRenderer.removeAllListeners('database-download-progress');
     }
   }
 });

@@ -298,3 +298,9 @@ mongodb-data/
 # Archivos de configuración de base de datos local
 db-config.local.json
 database.local.json
+
+# Archivos temporales de consultas y debugging
+query
+queries
+debug-*
+test-query*

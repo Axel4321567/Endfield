@@ -1,8 +1,8 @@
-import { app, BrowserWindow, session, ipcMain } from 'electron';
+import { app, BrowserWindow, session, ipcMain, globalShortcut } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import { DatabaseManager } from './automation/database-manager.js';
+import DatabaseManager from './automation/database-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -127,7 +127,7 @@ async function createWindow() {
     }
     
     // DevTools se pueden abrir manualmente con Ctrl+Shift+I o F12
-    // win.webContents.openDevTools();
+    win.webContents.openDevTools();
   } else {
     // En producción, buscar el archivo index.html en diferentes ubicaciones posibles
     const possiblePaths = [
@@ -156,8 +156,8 @@ async function createWindow() {
       win.loadURL('data:text/html,<html><body><h1>Error: No se pudo cargar la aplicación</h1><p>Por favor, contacta al soporte técnico.</p></body></html>');
     }
     
-    // DevTools deshabilitadas en producción
-    // win.webContents.openDevTools();
+    // DevTools habilitadas para debugging
+    win.webContents.openDevTools();
   }
 
   // Manejar navegación externa - crear nueva pestaña en lugar de ventana externa
@@ -469,6 +469,29 @@ app.whenReady().then(async () => {
 
   await createWindow();
 
+  // Configurar atajos de teclado para DevTools
+  try {
+    // F12 para abrir DevTools
+    globalShortcut.register('F12', () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.openDevTools();
+      }
+    });
+
+    // Ctrl+Shift+I para abrir DevTools (atajo estándar)
+    globalShortcut.register('CmdOrCtrl+Shift+I', () => {
+      const focusedWindow = BrowserWindow.getFocusedWindow();
+      if (focusedWindow) {
+        focusedWindow.webContents.openDevTools();
+      }
+    });
+
+    console.log('⌨️ Atajos de teclado para DevTools configurados: F12, Ctrl+Shift+I');
+  } catch (error) {
+    console.error('❌ Error configurando atajos:', error);
+  }
+
   // Inicializar auto-updater después de crear la ventana
   await setupAutoUpdater();
 
@@ -480,6 +503,9 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  // Limpiar atajos de teclado
+  globalShortcut.unregisterAll();
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -515,6 +541,17 @@ ipcMain.handle('app-get-status', () => {
     version: app.getVersion(),
     windows: BrowserWindow.getAllWindows().length
   };
+});
+
+// Handler para abrir DevTools
+ipcMain.handle('utils-show-devtools', () => {
+  console.log('🔧 Abriendo herramientas de desarrollador...');
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  if (focusedWindow) {
+    focusedWindow.webContents.openDevTools();
+    return { success: true };
+  }
+  return { success: false, error: 'No hay ventana activa' };
 });
 
 // 🧠 Sistema de navegación inteligente - Maneja ERR_ABORTED automáticamente - DESHABILITADO
@@ -901,11 +938,20 @@ function ensureDatabaseManager() {
 }
 
 // Handler para instalar MariaDB
-ipcMain.handle('database-install', async () => {
+ipcMain.handle('database-install', async (event) => {
   try {
     console.log('🔧 [Database] Iniciando instalación de MariaDB...');
     const manager = ensureDatabaseManager();
-    const result = await manager.installMariaDB();
+    
+    // Configurar listener para progreso de descarga
+    const progressHandler = (progressData) => {
+      event.sender.send('database-download-progress', progressData);
+    };
+    
+    // Configurar el manager para enviar eventos de progreso
+    manager.setProgressCallback(progressHandler);
+    
+    const result = await manager.install();
     console.log('✅ [Database] Instalación completada:', result);
     return result;
   } catch (error) {
@@ -915,15 +961,29 @@ ipcMain.handle('database-install', async () => {
 });
 
 // Handler para iniciar servicio MariaDB
-ipcMain.handle('database-start', async () => {
+ipcMain.handle('database-start', async (event) => {
+  const logToRenderer = (message) => {
+    console.log(message);
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.executeJavaScript(`console.log('${message.replace(/'/g, "\\'")}');`);
+    }
+  };
+  
   try {
-    console.log('▶️ [Database] Iniciando servicio MariaDB...');
+    logToRenderer('▶️ [Main] === INICIANDO database-start handler ===');
+    logToRenderer('▶️ [Main] Obteniendo DatabaseManager...');
+    
     const manager = ensureDatabaseManager();
+    logToRenderer('✅ [Main] DatabaseManager obtenido, llamando startMariaDB()...');
+    
     const result = await manager.startMariaDB();
-    console.log('✅ [Database] Servicio iniciado:', result);
+    logToRenderer('📥 [Main] === RESPUESTA DE startMariaDB ===');
+    logToRenderer('📥 [Main] Resultado: ' + JSON.stringify(result, null, 2));
+    
     return result;
   } catch (error) {
-    console.error('❌ [Database] Error al iniciar servicio:', error);
+    const errorMsg = '❌ [Main] Error al iniciar servicio: ' + error.message;
+    logToRenderer(errorMsg);
     return { success: false, error: error.message };
   }
 });
@@ -943,16 +1003,68 @@ ipcMain.handle('database-stop', async () => {
 });
 
 // Handler para obtener estado del servicio MariaDB
-ipcMain.handle('database-status', async () => {
+ipcMain.handle('database-status', async (event) => {
+  const logToRenderer = (message) => {
+    console.log(message);
+    // También enviar al renderer para que se vea en DevTools
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.executeJavaScript(`console.log('${message.replace(/'/g, "\\'")}');`);
+    }
+  };
+  
   try {
-    console.log('📊 [Database] Obteniendo estado del servicio...');
+    logToRenderer('📊 [Main] === INICIANDO database-status handler ===');
+    logToRenderer('📊 [Main] Obteniendo estado del servicio...');
+    
     const manager = ensureDatabaseManager();
+    logToRenderer('✅ [Main] DatabaseManager obtenido');
+    
     const result = await manager.getMariaDBStatus();
-    console.log('✅ [Database] Estado obtenido:', result);
-    return result;
+    logToRenderer('📥 [Main] === RESPUESTA DE DatabaseManager ===');
+    logToRenderer('📥 [Main] Resultado raw: ' + JSON.stringify(result, null, 2));
+    
+    // Adaptar formato para el frontend
+    const adaptedResult = {
+      success: true,
+      status: result.state === 'running' ? 'running' : 
+              result.state === 'stopped' ? 'stopped' :
+              result.state === 'paused' ? 'stopped' :
+              result.state === 'not-installed' ? 'error' : 'unknown',
+      installed: result.isInstalled,
+      serviceName: result.serviceName,
+      isRunning: result.isRunning,
+      version: result.version || 'No detectada',
+      error: result.state === 'not-installed' ? 'MariaDB no está instalado' : undefined
+    };
+    
+    logToRenderer('🔄 [Main] === ESTADO ADAPTADO PARA FRONTEND ===');
+    logToRenderer('🔄 [Main] Estado final: ' + JSON.stringify(adaptedResult, null, 2));
+    logToRenderer('📤 [Main] Enviando respuesta al renderer...');
+    
+    return adaptedResult;
   } catch (error) {
-    console.error('❌ [Database] Error al obtener estado:', error);
-    return { success: false, error: error.message, status: 'unknown' };
+    const errorMessage = '❌ [Main] Error al obtener estado: ' + error.message;
+    console.error(errorMessage);
+    
+    // También enviar error al renderer
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.executeJavaScript(`console.error('${errorMessage.replace(/'/g, "\\'")}');`);
+    }
+    
+    const errorResult = { 
+      success: false, 
+      error: error.message, 
+      status: 'unknown',
+      installed: false,
+      version: 'Error'
+    };
+    
+    // Log del resultado de error también
+    if (event.sender && !event.sender.isDestroyed()) {
+      event.sender.executeJavaScript(`console.log('📤 [Main] Enviando error: ${JSON.stringify(errorResult).replace(/'/g, "\\'")}');`);
+    }
+    
+    return errorResult;
   }
 });
 
