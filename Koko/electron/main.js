@@ -31,10 +31,10 @@ app.commandLine.appendSwitch('--disable-sync');
 app.commandLine.appendSwitch('--disable-background-networking');
 app.commandLine.appendSwitch('--disable-component-update');
 
-// Configuraciones específicas para bases de datos
-app.commandLine.appendSwitch('--disable-databases');
-app.commandLine.appendSwitch('--disable-local-storage');
-app.commandLine.appendSwitch('--disable-session-storage');
+// Configuraciones específicas para bases de datos - MANTENEMOS STORAGE PARA DISCORD
+// app.commandLine.appendSwitch('--disable-databases'); // Comentado para permitir persistencia
+// app.commandLine.appendSwitch('--disable-local-storage'); // Comentado para Discord
+// app.commandLine.appendSwitch('--disable-session-storage'); // Comentado para Discord
 app.commandLine.appendSwitch('--enable-logging');
 app.commandLine.appendSwitch('--log-level', '3'); // Solo errores críticos
 
@@ -150,18 +150,68 @@ app.whenReady().then(async () => {
   // Configurar cache y sesión para evitar errores de permisos
   const ses = session.defaultSession;
   
+  // 🔄 CONFIGURACIÓN ESPECÍFICA PARA DISCORD - SESIÓN PERSISTENTE
+  const discordSession = session.fromPartition('persist:discord', { cache: true });
+  
+  // Configurar Discord session para mantener datos
+  discordSession.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  
+  // Permitir todas las cookies para Discord
   try {
-    // Configurar cache de manera más específica y controlada
-    await ses.clearCache();
-    await ses.clearStorageData({
-      storages: ['cookies', 'filesystem', 'shadercache', 'websql'],
-      quotas: ['temporary', 'persistent', 'syncable']
+    await discordSession.cookies.set({
+      url: 'https://discord.com',
+      name: 'discord_persistent',
+      value: 'true',
+      secure: true,
+      httpOnly: false,
+      sameSite: 'no_restriction',
+      expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60) // 1 año
     });
     
-    console.log('🧹 Cache limpiado para evitar errores de permisos');
-  } catch (error) {
-    console.warn('⚠️ No se pudo limpiar completamente el cache:', error.message);
+    await discordSession.cookies.set({
+      url: 'https://discord.com',
+      name: 'discord_auto_login',
+      value: 'enabled',
+      secure: true,
+      httpOnly: false,
+      sameSite: 'no_restriction',
+      expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60)
+    });
+    
+    await discordSession.cookies.set({
+      url: 'https://discord.com',
+      name: 'discord_remember_me',
+      value: 'true',
+      secure: true,
+      httpOnly: false,
+      sameSite: 'no_restriction',
+      expirationDate: Math.floor(Date.now() / 1000) + (365 * 24 * 60 * 60)
+    });
+    
+    console.log('🍪 [Discord] Cookies persistentes configuradas');
+  } catch (err) {
+    console.warn('❌ No se pudieron configurar cookies Discord:', err);
   }
+  
+  // Configurar permisos para Discord
+  discordSession.setPermissionRequestHandler((webContents, permission, callback) => {
+    console.log('🔐 [Discord] Permiso solicitado:', permission);
+    
+    // Permitir notificaciones, micrófono, cámara para Discord
+    if (permission === 'notifications' || 
+        permission === 'microphone' || 
+        permission === 'camera' ||
+        permission === 'media') {
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+  
+  console.log('💾 [Discord] Sesión persistente configurada correctamente');
+  
+  // NO LIMPIAR CACHE - Mantener datos de Discord
+  console.log('🧹 Cache preservado para mantener sesión de Discord');
   
   // Habilitar webview tags y configurar permisos
 
@@ -183,8 +233,11 @@ app.whenReady().then(async () => {
     // Agregar User-Agent estándar para evitar detección de bot
     headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     
-    // Headers adicionales para Google y sitios problemáticos
-    if (details.url.includes('google.com') || details.url.includes('youtube.com')) {
+    // Headers adicionales para Google, Discord y sitios problemáticos
+    if (details.url.includes('google.com') || 
+        details.url.includes('youtube.com') ||
+        details.url.includes('discord.com') ||
+        details.url.includes('discordapp.com')) {
       headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8';
       headers['Accept-Language'] = 'en-US,en;q=0.5';
       headers['Accept-Encoding'] = 'gzip, deflate, br';
@@ -193,6 +246,13 @@ app.whenReady().then(async () => {
       headers['Sec-Fetch-Mode'] = 'navigate';
       headers['Sec-Fetch-Site'] = 'none';
       headers['Cache-Control'] = 'max-age=0';
+      
+      // Headers específicos para Discord
+      if (details.url.includes('discord.com') || details.url.includes('discordapp.com')) {
+        headers['Sec-Fetch-Site'] = 'same-origin';
+        headers['Sec-Fetch-User'] = '?1';
+        headers['Discord-Client'] = 'web';
+      }
       
       // Eliminar headers que pueden causar problemas
       delete headers['X-Frame-Options'];
@@ -234,13 +294,15 @@ app.whenReady().then(async () => {
       }
     });
     
-    // Configuración específica para Google y sitios problemáticos
+    // Configuración específica para Google, Discord y sitios problemáticos
     if (details.url.includes('google.com') || 
         details.url.includes('youtube.com') ||
         details.url.includes('googleapis.com') ||
-        details.url.includes('gstatic.com')) {
+        details.url.includes('gstatic.com') ||
+        details.url.includes('discord.com') ||
+        details.url.includes('discordapp.com')) {
       
-      // Eliminar completamente headers restrictivos de Google
+      // Eliminar completamente headers restrictivos
       delete filteredHeaders['X-Frame-Options'];
       delete filteredHeaders['x-frame-options'];
       delete filteredHeaders['Content-Security-Policy'];
@@ -248,18 +310,26 @@ app.whenReady().then(async () => {
       delete filteredHeaders['X-Content-Type-Options'];
       delete filteredHeaders['x-content-type-options'];
       
-      // Agregar headers permisivos para Google
+      // Agregar headers permisivos
       filteredHeaders['X-Frame-Options'] = ['ALLOWALL'];
       filteredHeaders['Access-Control-Allow-Origin'] = ['*'];
       filteredHeaders['Access-Control-Allow-Methods'] = ['GET, POST, PUT, DELETE, OPTIONS'];
       filteredHeaders['Access-Control-Allow-Headers'] = ['*'];
       filteredHeaders['Access-Control-Allow-Credentials'] = ['true'];
       
-      // Headers específicos para funcionalidades de YouTube
+      // Headers específicos para funcionalidades multimedia
       filteredHeaders['Feature-Policy'] = ['picture-in-picture *; autoplay *; fullscreen *; microphone *; camera *'];
       filteredHeaders['Permissions-Policy'] = ['picture-in-picture=*, autoplay=*, fullscreen=*, microphone=*, camera=*'];
       
-      console.log('🔓 Headers Google modificados para:', details.url);
+      // Headers específicos para Discord
+      if (details.url.includes('discord.com') || details.url.includes('discordapp.com')) {
+        filteredHeaders['Access-Control-Allow-Credentials'] = ['true'];
+        filteredHeaders['Cross-Origin-Embedder-Policy'] = ['unsafe-none'];
+        filteredHeaders['Cross-Origin-Opener-Policy'] = ['unsafe-none'];
+        console.log('� Headers Discord configurados para:', details.url);
+      }
+      
+      console.log('🔓 Headers modificados para:', details.url);
     }
     
     // Agregar headers permisivos para sitios externos (no localhost)
@@ -317,11 +387,13 @@ app.whenReady().then(async () => {
   ses.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
     console.log('🔍 Verificando permiso:', permission, 'para:', requestingOrigin);
     
-    // Permitir automáticamente para YouTube y Google
+    // Permitir automáticamente para YouTube, Google y Discord
     if (requestingOrigin.includes('youtube.com') || 
         requestingOrigin.includes('google.com') ||
-        requestingOrigin.includes('googleapis.com')) {
-      console.log('🎯 Permiso automático para YouTube/Google:', permission);
+        requestingOrigin.includes('googleapis.com') ||
+        requestingOrigin.includes('discord.com') ||
+        requestingOrigin.includes('discordapp.com')) {
+      console.log('🎯 Permiso automático para YouTube/Google/Discord:', permission);
       return true;
     }
     
@@ -618,6 +690,65 @@ ipcMain.handle('system-info', () => {
 });
 
 console.log('✅ [Koko] Manejadores de sistema activos');
+
+// Manejadores IPC para Discord
+ipcMain.handle('discord-reload', () => {
+  console.log('🔄 [Discord] Recargando Discord webview');
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('discord-reload-request');
+    return { success: true };
+  }
+  return { success: false, error: 'No main window found' };
+});
+
+ipcMain.handle('discord-status', () => {
+  console.log('📊 [Discord] Obteniendo estado de Discord');
+  // En un escenario real, aquí consultarías el estado real de Discord
+  return {
+    connected: true,
+    user: null, // Se llenaría con datos reales
+    guilds: 0
+  };
+});
+
+ipcMain.handle('discord-set-settings', (_, settings) => {
+  console.log('⚙️ [Discord] Configurando ajustes:', settings);
+  // En un escenario real, aquí guardarías la configuración
+  return { success: true };
+});
+
+ipcMain.handle('discord-get-settings', () => {
+  console.log('📋 [Discord] Obteniendo configuración actual');
+  // En un escenario real, aquí cargarías la configuración guardada
+  return {
+    theme: 'dark',
+    notifications: true,
+    autoStart: false
+  };
+});
+
+ipcMain.handle('discord-inject-css', (_, css) => {
+  console.log('🎨 [Discord] Inyectando CSS personalizado');
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('discord-inject-css', css);
+    return { success: true };
+  }
+  return { success: false, error: 'No main window found' };
+});
+
+ipcMain.handle('discord-optimize', () => {
+  console.log('🚀 [Discord] Optimizando Discord para mejor rendimiento');
+  const mainWin = BrowserWindow.getFocusedWindow();
+  if (mainWin) {
+    mainWin.webContents.send('discord-optimize-request');
+    return { success: true };
+  }
+  return { success: false, error: 'No main window found' };
+});
+
+console.log('✅ [Koko] Manejadores de Discord activos');
 
 // Configuración adicional para desarrollo
 async function setupDevelopment() {

@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { MainContent } from './components/MainContent/MainContent';
 import { useTabs } from './hooks/useTabs';
+import type { SidebarOption } from './types';
 import './App.css';
 
 function App() {
-  const [selectedOption, setSelectedOption] = useState<string | null>('koko-web');
+  const [selectedOption, setSelectedOption] = useState<SidebarOption>('dashboard');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // Estado global de pestañas para persistir entre navegación del sidebar
@@ -13,7 +14,7 @@ function App() {
 
   const handleSelectOption = (option: string) => {
     console.log(`🎯 App: Cambiando a opción: ${option}`);
-    setSelectedOption(option);
+    setSelectedOption(option as SidebarOption);
   };
 
   const toggleSidebar = () => {
