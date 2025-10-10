@@ -1,11 +1,32 @@
 import { app, BrowserWindow, session, ipcMain } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Importar autoUpdater de forma segura
+let autoUpdater = null;
+
+// Función para inicializar autoUpdater
+async function initializeAutoUpdater() {
+  try {
+    const updaterModule = await import('electron-updater');
+    autoUpdater = updaterModule.autoUpdater;
+    console.log('✅ [AutoUpdater] Módulo cargado exitosamente');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ [AutoUpdater] No disponible en esta versión:', error.message);
+    // Crear un mock para evitar errores
+    autoUpdater = {
+      checkForUpdatesAndNotify: () => console.log('AutoUpdater mock - no operation'),
+      on: () => {},
+      quitAndInstall: () => {}
+    };
+    return false;
+  }
+}
 
 // Configurar cache de Electron para evitar errores de permisos
 const userData = app.getPath('userData');
@@ -444,6 +465,9 @@ app.whenReady().then(async () => {
 
   await createWindow();
 
+  // Inicializar auto-updater después de crear la ventana
+  await setupAutoUpdater();
+
   app.on('activate', async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       await createWindow();
@@ -755,80 +779,102 @@ console.log('✅ [Koko] Manejadores de Discord activos');
 // AUTO-UPDATER CONFIGURATION
 // ========================
 
-// Configurar auto-updater
-autoUpdater.checkForUpdatesAndNotify();
-
-// Configurar eventos del auto-updater
-autoUpdater.on('checking-for-update', () => {
-  console.log('🔍 [AutoUpdater] Buscando actualizaciones...');
-});
-
-autoUpdater.on('update-available', (info) => {
-  console.log('🆕 [AutoUpdater] Actualización disponible:', info.version);
+// Función para configurar auto-updater después de inicializar
+async function setupAutoUpdater() {
+  const isUpdaterAvailable = await initializeAutoUpdater();
   
-  // Notificar al renderer sobre la actualización disponible
-  const mainWin = BrowserWindow.getFocusedWindow();
-  if (mainWin) {
-    mainWin.webContents.send('update-available', {
-      version: info.version,
-      releaseDate: info.releaseDate,
-      releaseNotes: info.releaseNotes
-    });
+  if (!isUpdaterAvailable) {
+    console.log('⚠️ [AutoUpdater] Auto-updater no disponible, saltando configuración');
+    return;
   }
-});
 
-autoUpdater.on('update-not-available', (info) => {
-  console.log('✅ [AutoUpdater] La aplicación está actualizada. Versión actual:', info.version);
-});
+  // Configurar auto-updater
+  autoUpdater.checkForUpdatesAndNotify();
 
-autoUpdater.on('error', (err) => {
-  console.error('❌ [AutoUpdater] Error en auto-updater:', err);
-});
+  // Configurar eventos del auto-updater
+  autoUpdater.on('checking-for-update', () => {
+    console.log('🔍 [AutoUpdater] Buscando actualizaciones...');
+  });
 
-autoUpdater.on('download-progress', (progressObj) => {
-  let log_message = "⬇️ [AutoUpdater] Descarga en progreso: " + progressObj.percent + '%';
-  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
-  console.log(log_message);
-  
-  // Notificar progreso al renderer
-  const mainWin = BrowserWindow.getFocusedWindow();
-  if (mainWin) {
-    mainWin.webContents.send('download-progress', {
-      percent: Math.round(progressObj.percent),
-      transferred: progressObj.transferred,
-      total: progressObj.total
-    });
-  }
-});
+  autoUpdater.on('update-available', (info) => {
+    console.log('🆕 [AutoUpdater] Actualización disponible:', info.version);
+    
+    // Notificar al renderer sobre la actualización disponible
+    const mainWin = BrowserWindow.getFocusedWindow();
+    if (mainWin) {
+      mainWin.webContents.send('update-available', {
+        version: info.version,
+        releaseDate: info.releaseDate,
+        releaseNotes: info.releaseNotes
+      });
+    }
+  });
 
-autoUpdater.on('update-downloaded', (info) => {
-  console.log('✅ [AutoUpdater] Actualización descargada. La aplicación se reiniciará en 5 segundos...');
-  
-  // Notificar al renderer que la actualización está lista
-  const mainWin = BrowserWindow.getFocusedWindow();
-  if (mainWin) {
-    mainWin.webContents.send('update-downloaded', {
-      version: info.version,
-      releaseDate: info.releaseDate
-    });
-  }
-  
-  // Reiniciar la aplicación automáticamente después de 5 segundos
-  setTimeout(() => {
-    autoUpdater.quitAndInstall();
-  }, 5000);
-});
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('✅ [AutoUpdater] La aplicación está actualizada. Versión actual:', info.version);
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('❌ [AutoUpdater] Error en auto-updater:', err);
+  });
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = "⬇️ [AutoUpdater] Descarga en progreso: " + progressObj.percent + '%';
+    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+    console.log(log_message);
+    
+    // Notificar progreso al renderer
+    const mainWin = BrowserWindow.getFocusedWindow();
+    if (mainWin) {
+      mainWin.webContents.send('download-progress', {
+        percent: Math.round(progressObj.percent),
+        transferred: progressObj.transferred,
+        total: progressObj.total
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('✅ [AutoUpdater] Actualización descargada. La aplicación se reiniciará en 5 segundos...');
+    
+    // Notificar al renderer que la actualización está lista
+    const mainWin = BrowserWindow.getFocusedWindow();
+    if (mainWin) {
+      mainWin.webContents.send('update-downloaded', {
+        version: info.version,
+        releaseDate: info.releaseDate
+      });
+    }
+    
+    // Reiniciar la aplicación automáticamente después de 5 segundos
+    setTimeout(() => {
+      autoUpdater.quitAndInstall();
+    }, 5000);
+  });
+
+  // Verificar actualizaciones cada 30 minutos
+  setInterval(() => {
+    console.log('⏱️ [AutoUpdater] Verificación automática de actualizaciones (cada 30 min)');
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 30 * 60 * 1000); // 30 minutos
+
+  console.log('✅ [AutoUpdater] Sistema de auto-actualización configurado');
+}
 
 // Manejadores IPC para auto-updater
 ipcMain.handle('check-for-updates', () => {
   console.log('🔍 [AutoUpdater] Verificación manual de actualizaciones solicitada');
-  autoUpdater.checkForUpdatesAndNotify();
+  if (autoUpdater && autoUpdater.checkForUpdatesAndNotify) {
+    autoUpdater.checkForUpdatesAndNotify();
+  }
   return { success: true, message: 'Buscando actualizaciones...' };
 });
 
 ipcMain.handle('install-update', () => {
   console.log('🔄 [AutoUpdater] Instalación manual de actualización solicitada');
-  autoUpdater.quitAndInstall();
+  if (autoUpdater && autoUpdater.quitAndInstall) {
+    autoUpdater.quitAndInstall();
+  }
   return { success: true };
 });
 
@@ -839,14 +885,6 @@ ipcMain.handle('get-app-version', () => {
     name: app.getName()
   };
 });
-
-// Verificar actualizaciones cada 30 minutos
-setInterval(() => {
-  console.log('⏱️ [AutoUpdater] Verificación automática de actualizaciones (cada 30 min)');
-  autoUpdater.checkForUpdatesAndNotify();
-}, 30 * 60 * 1000); // 30 minutos
-
-console.log('✅ [AutoUpdater] Sistema de auto-actualización configurado');
 
 // Configuración adicional para desarrollo
 async function setupDevelopment() {
