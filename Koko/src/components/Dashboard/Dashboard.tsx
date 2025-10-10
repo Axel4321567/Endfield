@@ -1,6 +1,7 @@
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
 import UpdateChecker from './UpdateChecker';
+import DiscordEmbed from './DiscordEmbed';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -152,23 +153,35 @@ export const Dashboard = () => {
           <UpdateChecker />
         </div>
 
-        <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+        <div className="dashboard-grid" style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+          gap: '16px',
+          alignItems: 'start'
+        }}>
+          
+          {/* Discord Embed - Tarjeta expandida */}
+          <div style={{ 
+            gridColumn: 'span 1',
+            minHeight: '500px',
+            maxHeight: '600px'
+          }}>
+            <DiscordEmbed />
+          </div>
           
           <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
             <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Estadísticas</h3>
             <p className="card-content" style={{ color: '#666' }}>Información general del sistema</p>
           </div>
+          
           <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
             <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Actividad Reciente</h3>
             <p className="card-content" style={{ color: '#666' }}>Últimas acciones realizadas</p>
           </div>
+          
           <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
             <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Configuración</h3>
             <p className="card-content" style={{ color: '#666' }}>Ajustes del sistema</p>
-          </div>
-          <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
-            <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Navegación</h3>
-            <p className="card-content" style={{ color: '#666' }}>Acceso rápido a herramientas</p>
           </div>
         </div>
       </div>

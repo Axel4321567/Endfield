@@ -282,3 +282,19 @@ renderer-process.log
 # Archivos de configuración local específicos
 config.local.json
 settings.local.json
+
+# Base de datos locales (SQLite, MongoDB embedded, etc.)
+*.db
+*.sqlite
+*.sqlite3
+database/
+db/
+data/
+mongodb-data/
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Archivos de configuración de base de datos local
+db-config.local.json
+database.local.json

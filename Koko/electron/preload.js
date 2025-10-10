@@ -122,6 +122,52 @@ contextBridge.exposeInMainWorld('electronAPI', {
       console.log('📊 [System] Obteniendo información del sistema');
       return ipcRenderer.invoke('system-info');
     }
+  },
+
+  // 💬 APIs específicas para Discord
+  discord: {
+    // Recargar Discord webview
+    reload: () => {
+      console.log('🔄 [Discord] Recargando Discord webview');
+      return ipcRenderer.invoke('discord-reload');
+    },
+
+    // Obtener estado de Discord
+    getStatus: () => {
+      console.log('📊 [Discord] Obteniendo estado de Discord');
+      return ipcRenderer.invoke('discord-status');
+    },
+
+    // Configurar ajustes de Discord
+    setSettings: (settings) => {
+      console.log('⚙️ [Discord] Configurando ajustes:', settings);
+      return ipcRenderer.invoke('discord-set-settings', settings);
+    },
+
+    // Obtener configuración actual
+    getSettings: () => {
+      console.log('📋 [Discord] Obteniendo configuración actual');
+      return ipcRenderer.invoke('discord-get-settings');
+    },
+
+    // Inyectar CSS personalizado en Discord
+    injectCSS: (css) => {
+      console.log('🎨 [Discord] Inyectando CSS personalizado');
+      return ipcRenderer.invoke('discord-inject-css', css);
+    },
+
+    // Optimizar Discord para mejor rendimiento
+    optimize: () => {
+      console.log('🚀 [Discord] Optimizando Discord para mejor rendimiento');
+      return ipcRenderer.invoke('discord-optimize');
+    },
+
+    // Listeners para eventos de Discord
+    onStatusChange: (callback) => ipcRenderer.on('discord-status-change', callback),
+    removeStatusChangeListener: () => ipcRenderer.removeAllListeners('discord-status-change'),
+
+    onNotification: (callback) => ipcRenderer.on('discord-notification', callback),
+    removeNotificationListener: () => ipcRenderer.removeAllListeners('discord-notification')
   }
 });
 

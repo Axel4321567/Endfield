@@ -1,5 +1,6 @@
 import SimpleKokoWeb from '../KokoWeb/SimpleKokoWeb';
 import { Dashboard } from '../Dashboard/Dashboard';
+import DiscordPanelSimple from '../Dashboard/DiscordPanelSimple';
 import type { TabsManager } from '../../types';
 import './MainContent.css';
 
@@ -24,6 +25,17 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
         width: '100%'
       }}>
         <SimpleKokoWeb tabsManager={tabsManager} />
+      </div>
+      
+      {/* Discord - Panel completo como Opera */}
+      <div style={{ 
+        display: selectedOption === 'discord' ? 'flex' : 'none',
+        flex: 1,
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <DiscordPanelSimple />
       </div>
       
       {/* Contenido de bienvenida - solo cuando no hay selección */}
