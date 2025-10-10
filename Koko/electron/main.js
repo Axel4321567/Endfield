@@ -2,16 +2,18 @@ import { app, BrowserWindow, session, ipcMain, globalShortcut } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
-import DatabaseManager from './automation/database-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Importar autoUpdater de forma segura
-let autoUpdater = null;
+// Importar DatabaseManager de forma segura para aplicaciones empaquetadas
+let DatabaseManager = null;
 
 // Instancia global del DatabaseManager
 let databaseManager = null;
+
+// Importar autoUpdater de forma segura
+let autoUpdater = null;
 
 // Función para inicializar autoUpdater
 async function initializeAutoUpdater() {
@@ -27,6 +29,38 @@ async function initializeAutoUpdater() {
       checkForUpdatesAndNotify: () => console.log('AutoUpdater mock - no operation'),
       on: () => {},
       quitAndInstall: () => {}
+    };
+    return false;
+  }
+}
+
+// Función para inicializar DatabaseManager
+async function initializeDatabaseManager() {
+  try {
+    // Intentar diferentes rutas para aplicaciones empaquetadas vs desarrollo
+    const isDev = !app.isPackaged;
+    let dbManagerPath;
+    
+    if (isDev) {
+      dbManagerPath = './automation/database-manager.js';
+    } else {
+      // En aplicaciones empaquetadas, buscar en resources
+      dbManagerPath = path.join(process.resourcesPath, 'automation', 'database-manager.js');
+    }
+    
+    console.log('🔍 [DatabaseManager] Intentando cargar desde:', dbManagerPath);
+    
+    const dbManagerModule = await import(dbManagerPath);
+    DatabaseManager = dbManagerModule.default || dbManagerModule.DatabaseManager;
+    console.log('✅ [DatabaseManager] Módulo cargado exitosamente');
+    return true;
+  } catch (error) {
+    console.warn('⚠️ [DatabaseManager] No se pudo cargar:', error.message);
+    // Crear un mock para evitar errores
+    DatabaseManager = class {
+      constructor() {
+        console.log('DatabaseManager mock creado');
+      }
     };
     return false;
   }
@@ -930,8 +964,11 @@ ipcMain.handle('get-app-version', () => {
 // ===== DATABASE MANAGEMENT IPC HANDLERS =====
 
 // Inicializar DatabaseManager cuando sea necesario
-function ensureDatabaseManager() {
+async function ensureDatabaseManager() {
   if (!databaseManager) {
+    if (!DatabaseManager) {
+      await initializeDatabaseManager();
+    }
     databaseManager = new DatabaseManager();
   }
   return databaseManager;
@@ -941,7 +978,7 @@ function ensureDatabaseManager() {
 ipcMain.handle('database-install', async (event) => {
   try {
     console.log('🔧 [Database] Iniciando instalación de MariaDB...');
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     
     // Configurar listener para progreso de descarga
     const progressHandler = (progressData) => {
@@ -973,7 +1010,7 @@ ipcMain.handle('database-start', async (event) => {
     logToRenderer('▶️ [Main] === INICIANDO database-start handler ===');
     logToRenderer('▶️ [Main] Obteniendo DatabaseManager...');
     
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     logToRenderer('✅ [Main] DatabaseManager obtenido, llamando startMariaDB()...');
     
     const result = await manager.startMariaDB();
@@ -992,7 +1029,7 @@ ipcMain.handle('database-start', async (event) => {
 ipcMain.handle('database-stop', async () => {
   try {
     console.log('⏹️ [Database] Deteniendo servicio MariaDB...');
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     const result = await manager.stopMariaDB();
     console.log('✅ [Database] Servicio detenido:', result);
     return result;
@@ -1016,7 +1053,7 @@ ipcMain.handle('database-status', async (event) => {
     logToRenderer('📊 [Main] === INICIANDO database-status handler ===');
     logToRenderer('📊 [Main] Obteniendo estado del servicio...');
     
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     logToRenderer('✅ [Main] DatabaseManager obtenido');
     
     const result = await manager.getMariaDBStatus();
@@ -1072,7 +1109,7 @@ ipcMain.handle('database-status', async (event) => {
 ipcMain.handle('database-open-heidisql', async () => {
   try {
     console.log('🖥️ [Database] Abriendo HeidiSQL...');
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     const result = await manager.openHeidiSQL();
     console.log('✅ [Database] HeidiSQL abierto:', result);
     return result;
@@ -1086,7 +1123,7 @@ ipcMain.handle('database-open-heidisql', async () => {
 ipcMain.handle('database-info', async () => {
   try {
     console.log('ℹ️ [Database] Obteniendo información completa...');
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     const status = await manager.getMariaDBStatus();
     
     return {
@@ -1114,7 +1151,7 @@ ipcMain.handle('database-info', async () => {
 ipcMain.handle('database-diagnostics', async () => {
   try {
     console.log('🔍 [Database] Ejecutando diagnósticos...');
-    const manager = ensureDatabaseManager();
+    const manager = await ensureDatabaseManager();
     const result = await manager.runDiagnostics();
     console.log('✅ [Database] Diagnósticos completados:', result);
     return result;
