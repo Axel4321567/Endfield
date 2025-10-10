@@ -1,10 +1,11 @@
 {
   "name": "koko",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Aplicación de navegador web construida con React, TypeScript, TailwindCSS y Tauri.",
   "main": "electron/main.js",
   "type": "module",
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
@@ -31,6 +32,8 @@
     "dist": "npm run build && electron-builder",
     "pack": "electron-builder --dir",
     "make": "electron-builder --win --x64",
+    "publish": "npm run build && electron-builder --publish=always",
+    "update-and-build": "git pull origin main && npm install && npm run publish",
     "installer": "powershell -ExecutionPolicy Bypass -File build-installer-simple.ps1",
     "installer:js": "node build-installer.js"
   },
@@ -42,6 +45,11 @@
     "productName": "Koko Browser",
     "directories": {
       "output": "dist-electron"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "TheYa0da",
+      "repo": "Endfield"
     },
     "files": [
       "dist/**/*",
@@ -59,11 +67,15 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "src-tauri/icons/icon.ico"

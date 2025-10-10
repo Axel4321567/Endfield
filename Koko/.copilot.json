@@ -16,6 +16,7 @@
     "3. Muestra un mensaje de verificación para comprobar si el cambio se aplicó correctamente.",
     "Usa nombres de componentes en PascalCase y estructura clara.",
     "Usa TailwindCSS para estilos.",
-    "El proyecto se dividirá más adelante en módulos (Koko-Web, extensiones, etc.), mantenlo preparado."
+    "El proyecto se dividirá más adelante en módulos (Koko-Web, extensiones, etc.), mantenlo preparado.",
+    "Los comandos npm se lanzan con cd 'C:\\Users\\TheYa\\Documents\\Git\\Endfield\\Koko' delante del comando."
   ]
 }
