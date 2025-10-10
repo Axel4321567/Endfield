@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
 import { useLogger } from '../../contexts/LogsContext';
-import UpdateChecker from './UpdateChecker';
 import DiscordEmbed from './DiscordEmbed';
 import './Dashboard.css';
 
@@ -164,11 +163,6 @@ export const Dashboard = () => {
               </ol>
             </div>
           </div>
-        </div>
-
-        {/* Sección de Actualización del Sistema */}
-        <div className="update-section" style={{ marginBottom: '24px' }}>
-          <UpdateChecker />
         </div>
 
         <div className="dashboard-grid" style={{ 
