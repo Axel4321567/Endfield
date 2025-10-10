@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
 import { useLogger } from '../../contexts/LogsContext';
-import DiscordEmbed from './DiscordEmbed';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -171,15 +170,6 @@ export const Dashboard = () => {
           gap: '16px',
           alignItems: 'start'
         }}>
-          
-          {/* Discord Embed - Tarjeta expandida */}
-          <div style={{ 
-            gridColumn: 'span 1',
-            minHeight: '500px',
-            maxHeight: '600px'
-          }}>
-            <DiscordEmbed />
-          </div>
           
           <div className="dashboard-card" style={{ backgroundColor: '#f9f9f9', padding: '16px', borderRadius: '8px', border: '1px solid #ddd' }}>
             <h3 className="card-title" style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>Estadísticas</h3>
