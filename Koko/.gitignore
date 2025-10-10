@@ -287,7 +287,6 @@ settings.local.json
 *.db
 *.sqlite
 *.sqlite3
-database/
 db/
 data/
 mongodb-data/
