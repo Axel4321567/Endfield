@@ -927,11 +927,11 @@ async function setupAutoUpdater() {
     }, 5000);
   });
 
-  // Verificar actualizaciones cada 30 minutos
+  // Verificar actualizaciones cada 2 minutos (para pruebas)
   setInterval(() => {
-    console.log('⏱️ [AutoUpdater] Verificación automática de actualizaciones (cada 30 min)');
+    console.log('⏱️ [AutoUpdater] Verificación automática de actualizaciones (cada 2 min)');
     autoUpdater.checkForUpdatesAndNotify();
-  }, 30 * 60 * 1000); // 30 minutos
+  }, 2 * 60 * 1000); // 2 minutos
 
   console.log('✅ [AutoUpdater] Sistema de auto-actualización configurado');
 }
