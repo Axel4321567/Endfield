@@ -2,11 +2,40 @@
   width: 100vw;
   height: 100vh;
   display: flex;
+  flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
   color: #ffffff;
   overflow: hidden;
   position: relative;
+}
+
+/* Contenedor principal que incluye sidebar y contenido */
+.app-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.content-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.content-area > :first-child {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.terminal-bottom {
+  border-top: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-panel-background);
+  flex-shrink: 0;
 }
 
 .app-container::before {

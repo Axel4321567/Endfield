@@ -1,4 +1,5 @@
 import './Sidebar.css';
+import { useLogger } from '../../contexts/LogsContext';
 
 interface SidebarProps {
   selectedOption: string | null;
@@ -26,15 +27,33 @@ const DiscordIcon = () => (
   </svg>
 );
 
+const DatabaseIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 3C7.58 3 4 4.79 4 7s3.58 4 8 4 8-1.79 8-4-3.58-4-8-4zM4 9v3c0 2.21 3.58 4 8 4s8-1.79 8-4V9c0 2.21-3.58 4-8 4s-8-1.79-8-4zM4 16v3c0 2.21 3.58 4 8 4s8-1.79 8-4v-3c0 2.21-3.58 4-8 4s-8-1.79-8-4z"/>
+  </svg>
+);
+
 const MenuIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
   </svg>
 );
 
+const TerminalIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 3h20c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2zm0 4v10h20V7H2zm2 8l4-4-4-4v8zm6 0h8v-2h-8v2z"/>
+  </svg>
+);
+
 export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle }: SidebarProps) => {
+  const { terminalOpen, setTerminalOpen } = useLogger();
+  
   const handleOptionClick = (option: string) => {
     onSelectOption(option);
+  };
+
+  const handleTerminalToggle = () => {
+    setTerminalOpen(!terminalOpen);
   };
 
   return (
@@ -74,6 +93,29 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
           <span className="sidebar-button-content">
             <DiscordIcon />
             {!isCollapsed && <span className="sidebar-button-text">Discord</span>}
+          </span>
+        </button>
+        <button 
+          onClick={() => handleOptionClick('database')}
+          className={`sidebar-button ${selectedOption === 'database' ? 'active' : ''}`}
+          title={isCollapsed ? 'Base de Datos' : ''}
+        >
+          <span className="sidebar-button-content">
+            <DatabaseIcon />
+            {!isCollapsed && <span className="sidebar-button-text">Base de Datos</span>}
+          </span>
+        </button>
+        
+        <div className="sidebar-divider"></div>
+        
+        <button 
+          onClick={handleTerminalToggle}
+          className={`sidebar-button terminal-button ${terminalOpen ? 'active' : ''}`}
+          title={isCollapsed ? (terminalOpen ? 'Ocultar Terminal' : 'Mostrar Terminal') : ''}
+        >
+          <span className="sidebar-button-content">
+            <TerminalIcon />
+            {!isCollapsed && <span className="sidebar-button-text">{terminalOpen ? 'Ocultar Terminal' : 'Mostrar Terminal'}</span>}
           </span>
         </button>
       </nav>

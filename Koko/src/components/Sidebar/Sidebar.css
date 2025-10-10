@@ -181,3 +181,30 @@
   opacity: 1;
   color: #ffffff;
 }
+
+/* Separador en el sidebar */
+.sidebar-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+  margin: 12px 20px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-container.collapsed .sidebar-divider {
+  margin: 12px 16px;
+}
+
+/* Botón de terminal con estilos especiales */
+.sidebar-button.terminal-button {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-button.terminal-button:hover {
+  background: linear-gradient(90deg, rgba(138, 43, 226, 0.1) 0%, rgba(75, 0, 130, 0.1) 100%);
+  border-color: rgba(138, 43, 226, 0.3);
+}
+
+.sidebar-button.terminal-button.active {
+  background: linear-gradient(90deg, #8a2be2 0%, #4b0082 100%);
+  box-shadow: 0 2px 8px rgba(138, 43, 226, 0.3);
+}

@@ -2,12 +2,16 @@ import { app, BrowserWindow, session, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import { DatabaseManager } from './automation/database-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Importar autoUpdater de forma segura
 let autoUpdater = null;
+
+// Instancia global del DatabaseManager
+let databaseManager = null;
 
 // Función para inicializar autoUpdater
 async function initializeAutoUpdater() {
@@ -885,6 +889,138 @@ ipcMain.handle('get-app-version', () => {
     name: app.getName()
   };
 });
+
+// ===== DATABASE MANAGEMENT IPC HANDLERS =====
+
+// Inicializar DatabaseManager cuando sea necesario
+function ensureDatabaseManager() {
+  if (!databaseManager) {
+    databaseManager = new DatabaseManager();
+  }
+  return databaseManager;
+}
+
+// Handler para instalar MariaDB
+ipcMain.handle('database-install', async () => {
+  try {
+    console.log('🔧 [Database] Iniciando instalación de MariaDB...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.installMariaDB();
+    console.log('✅ [Database] Instalación completada:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error en instalación:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para iniciar servicio MariaDB
+ipcMain.handle('database-start', async () => {
+  try {
+    console.log('▶️ [Database] Iniciando servicio MariaDB...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.startMariaDB();
+    console.log('✅ [Database] Servicio iniciado:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error al iniciar servicio:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para detener servicio MariaDB
+ipcMain.handle('database-stop', async () => {
+  try {
+    console.log('⏹️ [Database] Deteniendo servicio MariaDB...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.stopMariaDB();
+    console.log('✅ [Database] Servicio detenido:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error al detener servicio:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para obtener estado del servicio MariaDB
+ipcMain.handle('database-status', async () => {
+  try {
+    console.log('📊 [Database] Obteniendo estado del servicio...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.getMariaDBStatus();
+    console.log('✅ [Database] Estado obtenido:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error al obtener estado:', error);
+    return { success: false, error: error.message, status: 'unknown' };
+  }
+});
+
+// Handler para abrir HeidiSQL
+ipcMain.handle('database-open-heidisql', async () => {
+  try {
+    console.log('🖥️ [Database] Abriendo HeidiSQL...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.openHeidiSQL();
+    console.log('✅ [Database] HeidiSQL abierto:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error al abrir HeidiSQL:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Handler para obtener información completa de la base de datos
+ipcMain.handle('database-info', async () => {
+  try {
+    console.log('ℹ️ [Database] Obteniendo información completa...');
+    const manager = ensureDatabaseManager();
+    const status = await manager.getMariaDBStatus();
+    
+    return {
+      success: true,
+      status: status.status,
+      installed: status.installed,
+      version: status.version || 'N/A',
+      port: 3306,
+      host: 'localhost',
+      database: 'KokoDB',
+      uptime: status.uptime || null
+    };
+  } catch (error) {
+    console.error('❌ [Database] Error al obtener información:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      status: 'error',
+      installed: false
+    };
+  }
+});
+
+// Handler para ejecutar diagnósticos
+ipcMain.handle('database-diagnostics', async () => {
+  try {
+    console.log('🔍 [Database] Ejecutando diagnósticos...');
+    const manager = ensureDatabaseManager();
+    const result = await manager.runDiagnostics();
+    console.log('✅ [Database] Diagnósticos completados:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ [Database] Error en diagnósticos:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      issues: [{ 
+        type: 'general', 
+        message: 'Error ejecutando diagnósticos', 
+        solution: 'Reintentar como administrador' 
+      }]
+    };
+  }
+});
+
+console.log('✅ [Database] Handlers IPC configurados correctamente');
 
 // Configuración adicional para desarrollo
 async function setupDevelopment() {

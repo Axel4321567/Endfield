@@ -1,4 +1,4 @@
-export type SidebarOption = 'dashboard' | 'koko-web' | 'discord' | null;
+export type SidebarOption = 'dashboard' | 'koko-web' | 'discord' | 'database' | null;
 
 export interface SidebarItem {
   id: SidebarOption;
@@ -94,6 +94,41 @@ declare global {
         removeStatusChangeListener: () => void;
         onNotification: (callback: (event: any, notification: any) => void) => void;
         removeNotificationListener: () => void;
+      };
+      // APIs para gestión de base de datos (MariaDB + HeidiSQL)
+      database?: {
+        install: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        start: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        stop: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        getStatus: () => Promise<{ 
+          success: boolean; 
+          status: 'running' | 'stopped' | 'installing' | 'error' | 'unknown';
+          installed: boolean;
+          version?: string;
+          uptime?: number;
+          error?: string;
+        }>;
+        openHeidiSQL: () => Promise<{ success: boolean; message?: string; error?: string }>;
+        getInfo: () => Promise<{
+          success: boolean;
+          status: string;
+          installed: boolean;
+          version: string;
+          port: number;
+          host: string;
+          database: string;
+          uptime?: number;
+          error?: string;
+        }>;
+        runDiagnostics: () => Promise<{
+          success: boolean;
+          issues: Array<{
+            type: string;
+            message: string;
+            solution: string;
+          }>;
+          error?: string;
+        }>;
       };
     };
   }

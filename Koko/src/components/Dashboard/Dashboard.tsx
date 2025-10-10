@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
+import { useLogger } from '../../contexts/LogsContext';
 import UpdateChecker from './UpdateChecker';
 import DiscordEmbed from './DiscordEmbed';
 import './Dashboard.css';
@@ -7,22 +9,38 @@ import './Dashboard.css';
 export const Dashboard = () => {
   const sessionManager = useSessionManager();
   const { tabs, activeTabId } = useTabs();
+  const { addLog } = useLogger();
+  const hasLoggedInit = useRef(false);
+
+  // Log inicial al montar el componente - solo una vez
+  useEffect(() => {
+    if (!hasLoggedInit.current) {
+      addLog('🚀 Dashboard iniciado correctamente', 'success', 'dashboard');
+      addLog(`📊 Estado inicial: ${tabs.length} pestañas cargadas`, 'info', 'dashboard');
+      hasLoggedInit.current = true;
+    }
+  }, []); // Sin dependencias para que solo se ejecute una vez
 
   const handleClearSession = () => {
+    addLog('🗑️ Limpiando sesión actual...', 'info', 'dashboard');
     sessionManager.clearSession();
+    addLog('✅ Sesión eliminada correctamente', 'success', 'dashboard');
     console.log('🗑️ Sesión eliminada - recarga la app para ver la pestaña por defecto');
     alert('Sesión eliminada. La aplicación se recargará para mostrar la pestaña por defecto.');
     window.location.reload();
   };
 
   const handleLogSession = () => {
+    addLog('📋 Consultando información de sesión...', 'info', 'dashboard');
     const session = sessionManager.loadSession();
+    addLog(`📊 Sesión cargada: ${tabs.length} pestañas, activa: ${activeTabId}`, 'info', 'dashboard');
     console.log('📋 Sesión actual:', session);
     console.log('🔍 Pestañas en hooks:', tabs);
     alert(`Sesión actual:\n- Pestañas: ${tabs.length}\n- Activa: ${activeTabId}\n- Ver consola para más detalles`);
   };
 
   const handleForceReload = () => {
+    addLog('🔄 Recargando aplicación...', 'warn', 'dashboard');
     console.log('🔄 Recargando aplicación');
     window.location.reload();
   };

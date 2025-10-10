@@ -1,0 +1,15 @@
+[default]
+hostname=127.0.0.1
+username=root
+password=
+database=kokodb
+port=3306
+compressed=0
+ssl=0
+loginprompt=0
+library=mariadb-10.5.dll
+comment=Koko Browser Local Database
+startup_script=
+query_timeout=30
+keepalive_interval=0
+full_table_status=1

@@ -1,6 +1,7 @@
 import SimpleKokoWeb from '../KokoWeb/SimpleKokoWeb';
 import { Dashboard } from '../Dashboard/Dashboard';
 import DiscordPanelSimple from '../Dashboard/DiscordPanelSimple';
+import { DatabaseManager } from '../Database/DatabaseManager';
 import type { TabsManager } from '../../types';
 import './MainContent.css';
 
@@ -36,6 +37,18 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
         overflow: 'hidden'
       }}>
         <DiscordPanelSimple />
+      </div>
+      
+      {/* Database - Gestión de MariaDB y HeidiSQL */}
+      <div style={{ 
+        display: selectedOption === 'database' ? 'flex' : 'none',
+        flex: 1,
+        height: '100%',
+        width: '100%',
+        overflow: 'auto',
+        padding: '1rem'
+      }}>
+        <DatabaseManager />
       </div>
       
       {/* Contenido de bienvenida - solo cuando no hay selección */}

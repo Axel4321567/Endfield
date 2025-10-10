@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useLogger } from '../../contexts/LogsContext';
 import './DiscordPanel.css';
 
 interface DiscordPanelProps {
@@ -7,12 +8,16 @@ interface DiscordPanelProps {
 
 const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => {
   const webviewRef = useRef<any>(null);
+  const { addLog } = useLogger();
 
   useEffect(() => {
+    addLog('🚀 Discord panel iniciado', 'success', 'discord');
+    
     if (webviewRef.current) {
       const webview = webviewRef.current;
       
       const handleDomReady = () => {
+        addLog('🎯 Discord WebView cargado, aplicando estilos Opera', 'info', 'discord');
         console.log('🎯 [Discord] Aplicando estilos Opera');
         
         // JavaScript para ocultar modales y mantener sesión
@@ -105,7 +110,9 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
         // Ejecutar JavaScript
         try {
           webview.executeJavaScript(discordScript);
+          addLog('✅ JavaScript ejecutado en Discord WebView', 'success', 'discord');
         } catch (e) {
+          addLog('❌ Error al ejecutar JavaScript en Discord', 'error', 'discord');
           console.warn('No se pudo ejecutar JavaScript:', e);
         }
         
@@ -283,11 +290,13 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
       // Manejar navegación para evitar popups de seguridad
       webview.addEventListener('new-window', (e: any) => {
         e.preventDefault();
+        addLog(`🚫 Popup bloqueado: ${e.url}`, 'warn', 'discord');
         console.log('🚫 [Discord] Popup bloqueado:', e.url);
       });
       
       // Mantener sesión al cargar
       webview.addEventListener('did-finish-load', () => {
+        addLog('✅ Carga completa - configurando sesión persistente', 'success', 'discord');
         console.log('✅ [Discord] Carga completa - configurando sesión persistente');
         
         // Inyectar script para mantener sesión

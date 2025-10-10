@@ -61,6 +61,14 @@
       {
         "from": "electron/automation",
         "to": "automation"
+      },
+      {
+        "from": "resources/mariadb",
+        "to": "mariadb"
+      },
+      {
+        "from": "resources/heidisql",
+        "to": "heidisql"
       }
     ],
     "win": {

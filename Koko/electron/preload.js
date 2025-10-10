@@ -168,9 +168,55 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     onNotification: (callback) => ipcRenderer.on('discord-notification', callback),
     removeNotificationListener: () => ipcRenderer.removeAllListeners('discord-notification')
+  },
+
+  // 🗄️ APIs de Base de Datos (MariaDB + HeidiSQL)
+  database: {
+    // Instalar MariaDB
+    install: () => {
+      console.log('🔧 [Database] Iniciando instalación de MariaDB...');
+      return ipcRenderer.invoke('database-install');
+    },
+
+    // Iniciar servicio de base de datos
+    start: () => {
+      console.log('▶️ [Database] Iniciando servicio MariaDB...');
+      return ipcRenderer.invoke('database-start');
+    },
+
+    // Detener servicio de base de datos
+    stop: () => {
+      console.log('⏹️ [Database] Deteniendo servicio MariaDB...');
+      return ipcRenderer.invoke('database-stop');
+    },
+
+    // Obtener estado del servicio
+    getStatus: () => {
+      console.log('📊 [Database] Obteniendo estado del servicio...');
+      return ipcRenderer.invoke('database-status');
+    },
+
+    // Abrir HeidiSQL
+    openHeidiSQL: () => {
+      console.log('🖥️ [Database] Abriendo HeidiSQL...');
+      return ipcRenderer.invoke('database-open-heidisql');
+    },
+
+    // Obtener información completa de la base de datos
+    getInfo: () => {
+      console.log('ℹ️ [Database] Obteniendo información completa...');
+      return ipcRenderer.invoke('database-info');
+    },
+
+    // Ejecutar diagnósticos del sistema
+    runDiagnostics: () => {
+      console.log('🔍 [Database] Ejecutando diagnósticos del sistema...');
+      return ipcRenderer.invoke('database-diagnostics');
+    }
   }
 });
 
 // Log para confirmar que preload se cargó correctamente
 console.log('🚀 Electron preload script loaded successfully');
 console.log('✅ [Koko] Sistema de navegación inteligente disponible en window.electronAPI.navigation');
+console.log('✅ [Database] APIs de base de datos disponibles en window.electronAPI.database');
