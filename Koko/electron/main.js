@@ -892,10 +892,27 @@ async function setupAutoUpdater() {
 
   autoUpdater.on('update-not-available', (info) => {
     console.log('✅ [AutoUpdater] La aplicación está actualizada. Versión actual:', info.version);
+    
+    // Notificar al renderer
+    const mainWin = BrowserWindow.getFocusedWindow();
+    if (mainWin) {
+      mainWin.webContents.send('update-not-available', {
+        version: info.version
+      });
+    }
   });
 
   autoUpdater.on('error', (err) => {
     console.error('❌ [AutoUpdater] Error en auto-updater:', err);
+    
+    // Notificar error al renderer
+    const mainWin = BrowserWindow.getFocusedWindow();
+    if (mainWin) {
+      mainWin.webContents.send('update-error', {
+        message: err.message || 'Error desconocido',
+        stack: err.stack
+      });
+    }
   });
 
   autoUpdater.on('download-progress', (progressObj) => {

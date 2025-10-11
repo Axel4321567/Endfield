@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useSessionManager } from '../../hooks/useSessionManager';
 import { useTabs } from '../../hooks/useTabs';
 import { useLogger } from '../../contexts/LogsContext';
+import AutoUpdater from './AutoUpdater';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -162,6 +163,11 @@ export const Dashboard = () => {
               </ol>
             </div>
           </div>
+        </div>
+
+        {/* Sección de Auto-Updater */}
+        <div className="auto-updater-section" style={{ marginBottom: '24px' }}>
+          <AutoUpdater />
         </div>
 
         <div className="dashboard-grid" style={{ 

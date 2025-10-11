@@ -124,6 +124,55 @@ contextBridge.exposeInMainWorld('electronAPI', {
     }
   },
 
+  // 🔄 Auto-Updater de Electron
+  autoUpdater: {
+    // Verificar actualizaciones manualmente
+    checkForUpdates: () => {
+      console.log('🔍 [AutoUpdater] Verificando actualizaciones manualmente');
+      return ipcRenderer.invoke('check-for-updates');
+    },
+
+    // Instalar actualización descargada
+    installUpdate: () => {
+      console.log('📥 [AutoUpdater] Instalando actualización');
+      return ipcRenderer.invoke('install-update');
+    },
+
+    // Escuchar evento: actualización disponible
+    onUpdateAvailable: (callback) => {
+      ipcRenderer.on('update-available', (event, info) => callback(info));
+    },
+
+    // Escuchar evento: progreso de descarga
+    onDownloadProgress: (callback) => {
+      ipcRenderer.on('download-progress', (event, progress) => callback(progress));
+    },
+
+    // Escuchar evento: actualización descargada
+    onUpdateDownloaded: (callback) => {
+      ipcRenderer.on('update-downloaded', (event, info) => callback(info));
+    },
+
+    // Escuchar evento: no hay actualizaciones
+    onUpdateNotAvailable: (callback) => {
+      ipcRenderer.on('update-not-available', (event, info) => callback(info));
+    },
+
+    // Escuchar evento: error
+    onError: (callback) => {
+      ipcRenderer.on('update-error', (event, error) => callback(error));
+    },
+
+    // Remover listeners
+    removeAllListeners: () => {
+      ipcRenderer.removeAllListeners('update-available');
+      ipcRenderer.removeAllListeners('download-progress');
+      ipcRenderer.removeAllListeners('update-downloaded');
+      ipcRenderer.removeAllListeners('update-not-available');
+      ipcRenderer.removeAllListeners('update-error');
+    }
+  },
+
   // 💬 APIs específicas para Discord
   discord: {
     // Recargar Discord webview

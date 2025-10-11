@@ -134,6 +134,33 @@ declare global {
         onDownloadProgress: (callback: (progressData: { progress: number; phase: string }) => void) => void;
         removeDownloadProgressListener: () => void;
       };
+      // APIs para Auto-Updater de Electron
+      autoUpdater?: {
+        checkForUpdates: () => Promise<{ success: boolean; message: string }>;
+        installUpdate: () => Promise<{ success: boolean }>;
+        onUpdateAvailable: (callback: (info: {
+          version: string;
+          releaseDate?: string;
+          releaseNotes?: string;
+        }) => void) => void;
+        onDownloadProgress: (callback: (progress: {
+          percent: number;
+          transferred: number;
+          total: number;
+        }) => void) => void;
+        onUpdateDownloaded: (callback: (info: {
+          version: string;
+          releaseDate?: string;
+        }) => void) => void;
+        onUpdateNotAvailable: (callback: (info: {
+          version: string;
+        }) => void) => void;
+        onError: (callback: (error: {
+          message: string;
+          stack?: string;
+        }) => void) => void;
+        removeAllListeners: () => void;
+      };
     };
   }
 }
