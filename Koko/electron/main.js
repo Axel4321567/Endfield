@@ -989,6 +989,13 @@ ipcMain.handle('app-get-version', () => {
   return app.getVersion();
 });
 
+// Handler para verificar si estamos en modo desarrollo
+ipcMain.handle('app-is-dev', () => {
+  const isDev = !app.isPackaged;
+  console.log('🔍 [App] Modo:', isDev ? 'Desarrollo' : 'Producción');
+  return isDev;
+});
+
 // Handler para verificar actualizaciones usando el token de GitHub desde el backend
 ipcMain.handle('check-github-update', async () => {
   console.log('🔍 [GitHub] Verificando última release...');

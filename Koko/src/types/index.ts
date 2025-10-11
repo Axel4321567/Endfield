@@ -139,6 +139,7 @@ declare global {
         checkForUpdates: () => Promise<{ success: boolean; message: string }>;
         installUpdate: () => Promise<{ success: boolean }>;
         getVersion: () => Promise<string>;
+        isDev: () => Promise<boolean>;
         checkGitHubUpdate: () => Promise<{ 
           success: boolean; 
           version?: string; 

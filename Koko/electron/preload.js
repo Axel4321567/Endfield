@@ -143,6 +143,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return ipcRenderer.invoke('app-get-version');
     },
 
+    // Verificar si estamos en modo desarrollo
+    isDev: () => {
+      return ipcRenderer.invoke('app-is-dev');
+    },
+
     // Escuchar evento: actualización disponible
     onUpdateAvailable: (callback) => {
       ipcRenderer.on('update-available', (event, info) => callback(info));

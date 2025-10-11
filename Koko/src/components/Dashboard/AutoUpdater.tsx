@@ -161,6 +161,38 @@ const AutoUpdater: React.FC = () => {
     }
   };
 
+  // Función para descargar la actualización
+  const handleDownloadUpdate = async () => {
+    if (!window.electronAPI?.autoUpdater) {
+      setStatus('error');
+      setErrorMessage('API de actualización no disponible');
+      return;
+    }
+
+    try {
+      console.log('⬇️ [AutoUpdater UI] Iniciando descarga de actualización...');
+      
+      // Verificar si estamos en modo desarrollo
+      const isDev = await window.electronAPI.autoUpdater.isDev();
+      
+      if (isDev) {
+        // En modo dev, abrir la página de GitHub releases
+        console.log('🌐 [AutoUpdater UI] Modo desarrollo: abriendo página de releases en GitHub');
+        window.open('https://github.com/Axel4321567/Endfield/releases/latest', '_blank');
+        setStatus('idle');
+      } else {
+        // En producción, usar electron-updater
+        setStatus('downloading');
+        setErrorMessage('');
+        await window.electronAPI.autoUpdater.checkForUpdates();
+      }
+    } catch (error) {
+      console.error('❌ [AutoUpdater UI] Error al descargar actualización:', error);
+      setStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Error al descargar actualización');
+    }
+  };
+
   const handleInstallUpdate = async () => {
     if (!window.electronAPI?.autoUpdater) {
       return;
@@ -298,7 +330,7 @@ const AutoUpdater: React.FC = () => {
         {/* Botones de acción */}
         <div className="action-buttons">
           {status === 'available' && (
-            <button className="action-button download-button" onClick={handleCheckForUpdates}>
+            <button className="action-button download-button" onClick={handleDownloadUpdate}>
               <span>⬇️</span>
               Descargar actualización
             </button>
