@@ -858,13 +858,18 @@ console.log('✅ [Koko] Manejadores de Discord activos');
 async function setupAutoUpdater() {
   const isUpdaterAvailable = await initializeAutoUpdater();
   
-  if (!isUpdaterAvailable) {
+  if (!isUpdaterAvailable || !autoUpdater) {
     console.log('⚠️ [AutoUpdater] Auto-updater no disponible, saltando configuración');
     return;
   }
 
   // Configurar auto-updater
-  autoUpdater.checkForUpdatesAndNotify();
+  try {
+    autoUpdater.checkForUpdatesAndNotify();
+  } catch (error) {
+    console.error('❌ [AutoUpdater] Error al verificar actualizaciones:', error);
+    return;
+  }
 
   // Configurar eventos del auto-updater
   autoUpdater.on('checking-for-update', () => {
