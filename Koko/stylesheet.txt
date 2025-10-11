@@ -1,0 +1,401 @@
+/* ============================================================
+   🎨 OPERA GX DARK THEME - Full CSS (by Axel)
+   Inspirado en la interfaz oscura de Opera GX y su estética gamer.
+   ============================================================ */
+
+:root {
+  /* ==== Paleta base ==== */
+  --color-bg: #141414;
+  --color-bg-alt: #1b1b1b;
+  --color-surface: #222222;
+  --color-surface-alt: #2a2a2a;
+  --color-border: #333333;
+  --color-border-light: #3a3a3a;
+  --color-text: #e6e6e6;
+  --color-text-dim: #a8a8a8;
+  --color-text-muted: #888;
+
+  /* ==== Acentos ==== */
+  --color-accent: #ff1b2d;         /* rojo brillante Opera GX */
+  --color-accent-light: #ff3b49;   /* hover */
+  --color-accent-dark: #b8121e;    /* sombras/acento oscuro */
+  --color-accent-glow: #ff003c;    /* efecto neón */
+
+  /* ==== Otros ==== */
+  --color-success: #4ade80;
+  --color-warning: #facc15;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* ==== Transiciones, bordes y sombras ==== */
+  --radius-small: 6px;
+  --radius-medium: 10px;
+  --radius-large: 16px;
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.5);
+  --shadow-strong: 0 4px 20px rgba(0, 0, 0, 0.7);
+  --transition: 0.25s ease-in-out;
+  --blur-bg: blur(6px);
+}
+
+/* ============================================================
+   🧱 Estructura básica
+   ============================================================ */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: "Segoe UI", "Roboto", "Inter", "Open Sans", sans-serif;
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3, h4, h5 {
+  color: var(--color-text);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+p {
+  color: var(--color-text-dim);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   🔗 Enlaces
+   ============================================================ */
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition), text-shadow var(--transition);
+}
+a:hover {
+  color: var(--color-accent-light);
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
+
+/* ============================================================
+   🔘 Botones
+   ============================================================ */
+button,
+.btn {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  padding: 10px 18px;
+  cursor: pointer;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-soft);
+}
+
+button:hover,
+.btn:hover {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent-light);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+button:active,
+.btn:active {
+  transform: scale(0.97);
+}
+
+/* Botones principales */
+.btn-primary {
+  background-color: var(--color-accent);
+  color: #fff;
+  border: 1px solid var(--color-accent-dark);
+}
+.btn-primary:hover {
+  background-color: var(--color-accent-light);
+}
+
+/* Botón contorno */
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+.btn-outline:hover {
+  background-color: var(--color-accent);
+  color: #fff;
+}
+
+/* Botón desactivado */
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   🧩 Formularios
+   ============================================================ */
+input,
+select,
+textarea {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--color-text);
+  padding: 8px 12px;
+  transition: all var(--transition);
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-alt);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+/* Placeholders */
+::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Checkboxes y radios */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--color-accent);
+}
+
+/* ============================================================
+   📦 Tarjetas / Paneles
+   ============================================================ */
+.card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-soft);
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-strong);
+}
+
+/* ============================================================
+   🧭 Navbar
+   ============================================================ */
+.navbar {
+  background-color: rgba(26, 26, 26, 0.9);
+  backdrop-filter: var(--blur-bg);
+  border-bottom: 1px solid var(--color-border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navbar a {
+  color: var(--color-text);
+  margin: 0 14px;
+  transition: color var(--transition), text-shadow var(--transition);
+}
+.navbar a:hover {
+  color: var(--color-accent-light);
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
+
+/* ============================================================
+   📚 Sidebar estilo Opera GX
+   ============================================================ */
+.sidebar {
+  width: 240px;
+  background: linear-gradient(180deg, #191919 0%, #111 100%);
+  border-right: 1px solid var(--color-border);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+}
+
+.sidebar .logo {
+  text-align: center;
+  color: var(--color-accent);
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.sidebar a {
+  padding: 10px 16px;
+  border-radius: var(--radius-small);
+  color: var(--color-text);
+  margin-bottom: 8px;
+  transition: all var(--transition);
+}
+.sidebar a:hover {
+  background-color: var(--color-accent-dark);
+  color: #fff;
+  text-shadow: 0 0 6px var(--color-accent-glow);
+}
+
+/* ============================================================
+   🧮 Tablas
+   ============================================================ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-medium);
+  overflow: hidden;
+}
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+th {
+  background-color: var(--color-bg-alt);
+  color: var(--color-accent-light);
+}
+tr:hover {
+  background-color: var(--color-surface-alt);
+}
+
+/* ============================================================
+   ⚙️ Switch / Toggle
+   ============================================================ */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background-color: var(--color-border);
+  transition: 0.4s;
+  border-radius: 26px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 4px;
+  bottom: 4px;
+  background-color: var(--color-text);
+  transition: 0.4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+}
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+/* ============================================================
+   🖤 Scrollbar personalizada
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  background: var(--color-bg-alt);
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+  border-radius: 6px;
+  border: 1px solid var(--color-accent-dark);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--color-accent-light) 0%, var(--color-accent) 100%);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+/* ============================================================
+   🌌 Efectos visuales y animaciones
+   ============================================================ */
+.glow {
+  color: var(--color-accent-light);
+  text-shadow: 0 0 10px var(--color-accent-glow), 0 0 20px var(--color-accent-glow);
+}
+
+.neon-border {
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--color-accent-glow); }
+  50% { box-shadow: 0 0 20px var(--color-accent-light); }
+}
+
+/* ============================================================
+   ⚡ Modales
+   ============================================================ */
+.modal {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  animation: fadeIn 0.4s ease-in-out;
+}
+.modal-content {
+  background-color: var(--color-surface);
+  padding: 24px;
+  border-radius: var(--radius-large);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-strong);
+  max-width: 600px;
+  width: 90%;
+}
+
+/* ============================================================
+   ⚙️ Utilidades y helpers
+   ============================================================ */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.rounded { border-radius: var(--radius-medium); }
+.shadow { box-shadow: var(--shadow-soft); }
+
+/* ============================================================
+   🌙 Transición global
+   ============================================================ */
+* {
+  transition: background-color var(--transition),
+              color var(--transition),
+              border var(--transition),
+              box-shadow var(--transition);
+}

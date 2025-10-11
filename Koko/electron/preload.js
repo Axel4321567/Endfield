@@ -224,6 +224,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return ipcRenderer.invoke('discord-optimize');
     },
 
+    // 🔐 Gestión de token para persistencia de sesión
+    saveToken: (token) => {
+      console.log('💾 [Discord] Guardando token');
+      return ipcRenderer.invoke('discord-save-token', token);
+    },
+
+    getToken: () => {
+      console.log('🔑 [Discord] Recuperando token');
+      return ipcRenderer.invoke('discord-get-token');
+    },
+
+    deleteToken: () => {
+      console.log('🗑️ [Discord] Eliminando token');
+      return ipcRenderer.invoke('discord-delete-token');
+    },
+
     // Listeners para eventos de Discord
     onStatusChange: (callback) => ipcRenderer.on('discord-status-change', callback),
     removeStatusChangeListener: () => ipcRenderer.removeAllListeners('discord-status-change'),

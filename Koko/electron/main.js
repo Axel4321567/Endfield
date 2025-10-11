@@ -2,6 +2,7 @@ import { app, BrowserWindow, session, ipcMain, globalShortcut, Menu } from 'elec
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,13 +67,60 @@ async function initializeDatabaseManager() {
   }
 }
 
-// Configurar cache de Electron para evitar errores de permisos
-const userData = app.getPath('userData');
-const cacheDir = path.join(userData, 'cache');
+// Configurar userData personalizado para mejor persistencia
+const customUserData = path.join(app.getPath('appData'), 'KokoBrowserData');
+app.setPath('userData', customUserData);
+app.setPath('cache', path.join(customUserData, 'cache'));
 
-// Configurar directorio de cache antes de que la app esté lista
-app.setPath('userData', userData);
-app.setPath('cache', cacheDir);
+console.log('💾 [App] userData configurado en:', customUserData);
+
+// 🔐 Funciones para gestionar token de Discord
+const discordTokenPath = path.join(customUserData, 'discord-token.json');
+
+function saveDiscordToken(token) {
+  try {
+    const data = {
+      token: Buffer.from(token).toString('base64'),
+      timestamp: Date.now()
+    };
+    fs.writeFileSync(discordTokenPath, JSON.stringify(data), 'utf8');
+    console.log('💾 [Discord] Token guardado exitosamente');
+    return true;
+  } catch (error) {
+    console.error('❌ [Discord] Error guardando token:', error);
+    return false;
+  }
+}
+
+function readDiscordToken() {
+  try {
+    if (fs.existsSync(discordTokenPath)) {
+      const data = JSON.parse(fs.readFileSync(discordTokenPath, 'utf8'));
+      const token = Buffer.from(data.token, 'base64').toString('utf8');
+      console.log('✅ [Discord] Token recuperado');
+      return token;
+    }
+    console.log('ℹ️ [Discord] No hay token guardado');
+    return null;
+  } catch (error) {
+    console.error('❌ [Discord] Error leyendo token:', error);
+    return null;
+  }
+}
+
+function deleteDiscordToken() {
+  try {
+    if (fs.existsSync(discordTokenPath)) {
+      fs.unlinkSync(discordTokenPath);
+      console.log('🗑️ [Discord] Token eliminado');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('❌ [Discord] Error eliminando token:', error);
+    return false;
+  }
+}
 
 // Configuración adicional para compatibilidad con Google
 app.commandLine.appendSwitch('--disable-http-cache');
@@ -893,6 +941,22 @@ ipcMain.handle('discord-inject-css', (_, css) => {
     return { success: true };
   }
   return { success: false, error: 'No main window found' };
+});
+
+// 🔐 Handlers para gestión de token de Discord
+ipcMain.handle('discord-save-token', (_, token) => {
+  console.log('💾 [Discord] Guardando token');
+  return saveDiscordToken(token);
+});
+
+ipcMain.handle('discord-get-token', () => {
+  console.log('🔑 [Discord] Recuperando token');
+  return readDiscordToken();
+});
+
+ipcMain.handle('discord-delete-token', () => {
+  console.log('🗑️ [Discord] Eliminando token');
+  return deleteDiscordToken();
 });
 
 ipcMain.handle('discord-optimize', () => {
