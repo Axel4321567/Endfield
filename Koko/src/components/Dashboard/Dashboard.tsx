@@ -54,55 +54,124 @@ export const Dashboard = () => {
       <div className="dashboard-content">
         {/* Sección de Gestión de Sesiones */}
         <div className="session-management-section" style={{ marginBottom: '24px' }}>
-          <div className="session-card" style={{ 
-            backgroundColor: '#e8f4fd', 
-            padding: '20px', 
-            borderRadius: '12px', 
-            border: '2px solid #3b82f6',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          <div style={{ 
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+            padding: '28px',
+            borderRadius: '16px',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <h3 style={{ 
-              fontSize: '20px', 
-              fontWeight: 'bold', 
-              marginBottom: '12px',
-              color: '#1d4ed8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              🧪 Gestión de Sesiones
-            </h3>
-            
+            {/* Header con icono */}
             <div style={{ 
-              backgroundColor: 'rgba(59, 130, 246, 0.1)', 
-              padding: '12px', 
-              borderRadius: '8px', 
-              marginBottom: '16px',
-              fontSize: '14px',
-              color: '#1e40af'
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'space-between',
+              marginBottom: '24px'
             }}>
-              <p><strong>Estado Actual:</strong></p>
-              <p>• Pestañas: {tabs.length}</p>
-              <p>• Pestaña Activa: {activeTabId || 'Ninguna'}</p>
-              <p>• Sesión: {sessionManager.session ? 'Guardada' : 'Sin guardar'}</p>
+              <h3 style={{ 
+                fontSize: '22px', 
+                fontWeight: '700',
+                color: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                margin: 0
+              }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
+                  padding: '10px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '20px'
+                }}>🧪</span>
+                Gestión de Sesiones
+              </h3>
+            </div>
+            
+            {/* Estado con badge */}
+            <div style={{ 
+              background: 'rgba(59, 130, 246, 0.1)',
+              backdropFilter: 'blur(10px)',
+              padding: '20px',
+              borderRadius: '12px',
+              marginBottom: '20px',
+              border: '1px solid rgba(59, 130, 246, 0.2)'
+            }}>
+              <p style={{ 
+                color: '#cbd5e1', 
+                fontSize: '14px', 
+                marginBottom: '12px',
+                fontWeight: '600'
+              }}>
+                Estado Actual:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>• Pestañas:</span>
+                  <span style={{ 
+                    color: '#3b82f6', 
+                    fontWeight: '700',
+                    fontSize: '14px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    padding: '2px 8px',
+                    borderRadius: '6px'
+                  }}>{tabs.length}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>• Pestaña Activa:</span>
+                  <span style={{ 
+                    color: '#f1f5f9', 
+                    fontSize: '13px',
+                    fontFamily: 'monospace'
+                  }}>{activeTabId || 'Ninguna'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ color: '#94a3b8', fontSize: '13px' }}>• Sesión:</span>
+                  <span style={{ 
+                    color: sessionManager.session ? '#10b981' : '#ef4444',
+                    fontWeight: '600',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {sessionManager.session ? '✓ Guardada' : '⚠ Sin guardar'}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Botones con estilo moderno */}
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '20px' }}>
               <button 
                 onClick={handleLogSession}
                 style={{
-                  backgroundColor: '#3b82f6',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'background-color 0.2s'
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
-                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2563eb'}
-                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3b82f6'}
+                onMouseOver={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
+                }}
               >
                 📋 Ver Sesión
               </button>
@@ -110,18 +179,28 @@ export const Dashboard = () => {
               <button 
                 onClick={handleClearSession}
                 style={{
-                  backgroundColor: '#ef4444',
+                  background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'background-color 0.2s'
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
-                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#dc2626'}
-                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#ef4444'}
+                onMouseOver={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(239, 68, 68, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.3)';
+                }}
               >
                 🗑️ Limpiar Sesión
               </button>
@@ -129,33 +208,57 @@ export const Dashboard = () => {
               <button 
                 onClick={handleForceReload}
                 style={{
-                  backgroundColor: '#10b981',
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                   color: 'white',
                   border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '6px',
+                  padding: '12px 20px',
+                  borderRadius: '10px',
                   cursor: 'pointer',
                   fontSize: '14px',
-                  fontWeight: '500',
-                  transition: 'background-color 0.2s'
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
-                onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#059669'}
-                onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#10b981'}
+                onMouseOver={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
+                }}
+                onMouseOut={(e) => {
+                  (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.target as HTMLButtonElement).style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                }}
               >
                 🔄 Recargar App
               </button>
             </div>
 
+            {/* Instrucciones con badge verde */}
             <div style={{ 
-              marginTop: '16px', 
-              padding: '12px', 
-              backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-              borderRadius: '8px',
-              fontSize: '12px',
-              color: '#047857'
+              background: 'rgba(16, 185, 129, 0.1)',
+              backdropFilter: 'blur(10px)',
+              padding: '16px',
+              borderRadius: '12px',
+              border: '1px solid rgba(16, 185, 129, 0.2)'
             }}>
-              <strong>💡 Instrucciones:</strong>
-              <ol style={{ paddingLeft: '16px', margin: '8px 0' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                marginBottom: '12px'
+              }}>
+                <span style={{ fontSize: '16px' }}>💡</span>
+                <strong style={{ color: '#10b981', fontSize: '14px' }}>Instrucciones:</strong>
+              </div>
+              <ol style={{ 
+                paddingLeft: '20px', 
+                margin: 0,
+                color: '#94a3b8',
+                fontSize: '13px',
+                lineHeight: '1.8'
+              }}>
                 <li>Ve a "Koko-Web" y abre varias pestañas</li>
                 <li>Cierra la aplicación completamente</li>
                 <li>Reabre la app - las pestañas deberían restaurarse automáticamente</li>
