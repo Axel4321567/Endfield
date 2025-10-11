@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "updateChannel": "stable",
+  "browserPath": "C:/Users/TheYa/AppData/Local/Programs/Koko Browser/Koko Browser.exe",
+  "lastUpdate": "2024-10-11T00:00:00.000Z",
+  "autoUpdate": true,
+  "updateCheckInterval": 3600000,
+  "updateUrls": {
+    "stable": "https://api.github.com/repos/Axel4321567/Endfield/releases/latest",
+    "beta": "https://api.github.com/repos/Axel4321567/Endfield/releases",
+    "dev": "https://api.github.com/repos/Axel4321567/Endfield/releases"
+  },
+  "dependencies": {
+    "mariadb": {
+      "version": "10.11.5",
+      "path": "./MariaDB/bin/mysqld.exe",
+      "autoStart": true
+    },
+    "heidisql": {
+      "version": "12.5.0",
+      "path": "./HeidiSQL/heidisql.exe",
+      "autoStart": false
+    }
+  },
+  "launcher": {
+    "theme": "dark",
+    "animations": true,
+    "showLogs": false,
+    "autoClose": false,
+    "closeDelay": 3000
+  }
+}

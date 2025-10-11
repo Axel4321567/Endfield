@@ -1,0 +1,87 @@
+{
+  "name": "koko-launcher",
+  "version": "1.0.0",
+  "description": "Launcher independiente para Koko Browser - Gestiona instalación, actualización y ejecución",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:vite\" \"npm run dev:electron\"",
+    "dev:vite": "vite",
+    "dev:electron": "wait-on tcp:5177 && electron .",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "electron .",
+    "electron:pack": "electron-builder",
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win",
+    "start:browser": "node electron/updater/launchApp.js",
+    "publish": "npm run build && electron-builder --publish=always",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "keywords": [
+    "koko",
+    "browser",
+    "launcher",
+    "electron",
+    "react",
+    "typescript",
+    "updater"
+  ],
+  "author": "Koko Browser Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/react": "^18.2.31",
+    "@types/react-dom": "^18.2.14",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "@vitejs/plugin-react": "^4.1.0",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4",
+    "eslint": "^8.52.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "wait-on": "^7.2.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.6.2",
+    "framer-motion": "^10.16.4",
+    "lucide-react": "^0.287.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "semver": "^7.5.4"
+  },
+  "build": {
+    "appId": "com.koko.launcher",
+    "productName": "Koko Launcher",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "resources/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Axel4321567",
+      "repo": "Endfield"
+    }
+  }
+}

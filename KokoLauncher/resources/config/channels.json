@@ -1,0 +1,30 @@
+{
+  "channels": {
+    "stable": {
+      "name": "Estable",
+      "description": "Versión estable recomendada para uso general",
+      "updateUrl": "https://api.github.com/repos/Axel4321567/Endfield/releases/latest",
+      "checkInterval": 86400000,
+      "autoUpdate": true
+    },
+    "beta": {
+      "name": "Beta",
+      "description": "Versión beta con nuevas características en prueba",
+      "updateUrl": "https://api.github.com/repos/Axel4321567/Endfield/releases",
+      "checkInterval": 43200000,
+      "autoUpdate": false,
+      "prerelease": true
+    },
+    "dev": {
+      "name": "Desarrollo",
+      "description": "Versión de desarrollo con las últimas características",
+      "updateUrl": "https://api.github.com/repos/Axel4321567/Endfield/releases",
+      "checkInterval": 21600000,
+      "autoUpdate": false,
+      "prerelease": true,
+      "experimental": true
+    }
+  },
+  "defaultChannel": "stable",
+  "allowChannelSwitch": true
+}
