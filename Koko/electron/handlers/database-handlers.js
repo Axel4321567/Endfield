@@ -31,12 +31,14 @@ export function registerDatabaseHandlers() {
       console.log('🔧 [Database] Iniciando instalación de MariaDB...');
       const manager = await ensureDatabaseManager();
       
-      // Configurar callback de progreso
+      // Configurar callback de progreso si el método existe
       const progressHandler = (progressData) => {
         event.sender.send('database-download-progress', progressData);
       };
       
-      manager.setProgressCallback(progressHandler);
+      if (typeof manager.setProgressCallback === 'function') {
+        manager.setProgressCallback(progressHandler);
+      }
       
       const result = await manager.install();
       console.log('✅ [Database] Instalación completada:', result);
