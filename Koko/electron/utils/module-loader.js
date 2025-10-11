@@ -51,10 +51,50 @@ export async function initializeDatabaseManager() {
     return DatabaseManager;
   } catch (error) {
     console.warn('⚠️ [DatabaseManager] No se pudo cargar:', error.message);
-    // Crear un mock para evitar errores
-    return class {
+    console.error('⚠️ [DatabaseManager] Error completo:', error);
+    // Crear un mock completo para evitar errores
+    return class DatabaseManagerMock {
       constructor() {
-        console.log('DatabaseManager mock creado');
+        console.log('⚠️ DatabaseManager mock creado - funcionalidad limitada');
+      }
+      
+      setProgressCallback(callback) {
+        console.log('⚠️ Mock: setProgressCallback llamado');
+      }
+      
+      async install() {
+        console.error('❌ DatabaseManager no disponible - no se puede instalar');
+        return { success: false, error: 'DatabaseManager no está disponible en este entorno' };
+      }
+      
+      async startMariaDB() {
+        return { success: false, error: 'DatabaseManager no está disponible' };
+      }
+      
+      async stopMariaDB() {
+        return { success: false, error: 'DatabaseManager no está disponible' };
+      }
+      
+      async getMariaDBStatus() {
+        return { 
+          success: false, 
+          state: 'not-installed',
+          isInstalled: false,
+          isRunning: false,
+          error: 'DatabaseManager no está disponible'
+        };
+      }
+      
+      async openHeidiSQL() {
+        return { success: false, error: 'DatabaseManager no está disponible' };
+      }
+      
+      async runDiagnostics() {
+        return { 
+          success: false, 
+          error: 'DatabaseManager no está disponible',
+          issues: []
+        };
       }
     };
   }
