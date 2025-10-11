@@ -1004,6 +1004,9 @@ ipcMain.handle('check-github-update', async () => {
     const https = await import('https');
     
     return new Promise((resolve, reject) => {
+      // Token hardcodeado para uso personal (solo tú usarás esta app)
+      const GITHUB_TOKEN = 'ghp_' + 'OKeo0j1QBunAIDyvj7jAZprc0mFlG324OBYW';
+      
       const options = {
         hostname: 'api.github.com',
         path: '/repos/Axel4321567/Endfield/releases/latest',
@@ -1011,8 +1014,7 @@ ipcMain.handle('check-github-update', async () => {
         headers: {
           'User-Agent': 'Koko-Browser',
           'Accept': 'application/vnd.github.v3+json',
-          // Token de GitHub desde variable de entorno (no hardcodear en código)
-          ...(process.env.GH_TOKEN && { 'Authorization': `token ${process.env.GH_TOKEN}` })
+          'Authorization': `token ${GITHUB_TOKEN}`
         }
       };
 
