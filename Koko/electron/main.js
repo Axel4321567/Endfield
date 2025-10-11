@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, session, ipcMain, globalShortcut, Menu } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import os from 'os';
@@ -162,7 +162,7 @@ async function createWindow() {
     }
     
     // DevTools se pueden abrir manualmente con Ctrl+Shift+I o F12
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
   } else {
     // En producción, buscar el archivo index.html en diferentes ubicaciones posibles
     const possiblePaths = [
@@ -192,7 +192,7 @@ async function createWindow() {
     }
     
     // DevTools habilitadas para debugging
-    win.webContents.openDevTools();
+    // win.webContents.openDevTools();
   }
 
   // Manejar navegación externa - crear nueva pestaña en lugar de ventana externa
@@ -204,6 +204,29 @@ async function createWindow() {
     
     return { action: 'deny' };
   });
+
+  // Configurar atajos de teclado para DevTools directamente en la ventana
+  win.webContents.on('before-input-event', (event, input) => {
+    // F12
+    if (input.key === 'F12' && input.type === 'keyDown') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+    
+    // Ctrl+Shift+I o Cmd+Shift+I
+    if (input.key === 'I' && input.shift && (input.control || input.meta) && input.type === 'keyDown') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+    
+    // Ctrl+Shift+C (inspector de elementos)
+    if (input.key === 'C' && input.shift && (input.control || input.meta) && input.type === 'keyDown') {
+      win.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
+
+  return win;
 }
 
 // Configurar sesión para permitir webview y funcionalidades avanzadas de YouTube
@@ -504,28 +527,61 @@ app.whenReady().then(async () => {
 
   await createWindow();
 
-  // Configurar atajos de teclado para DevTools
-  try {
-    // F12 para abrir DevTools
-    globalShortcut.register('F12', () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        focusedWindow.webContents.openDevTools();
-      }
-    });
+  // Crear menú de aplicación con DevTools
+  const template = [
+    {
+      label: 'Ver',
+      submenu: [
+        {
+          label: 'Recargar',
+          accelerator: 'CmdOrCtrl+R',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) focusedWindow.reload();
+          }
+        },
+        {
+          label: 'Herramientas de Desarrollador',
+          accelerator: process.platform === 'darwin' ? 'Alt+Command+I' : 'Ctrl+Shift+I',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) focusedWindow.webContents.toggleDevTools();
+          }
+        },
+        { type: 'separator' },
+        {
+          label: 'Zoom In',
+          accelerator: 'CmdOrCtrl+Plus',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomLevel();
+              focusedWindow.webContents.setZoomLevel(currentZoom + 1);
+            }
+          }
+        },
+        {
+          label: 'Zoom Out',
+          accelerator: 'CmdOrCtrl+-',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) {
+              const currentZoom = focusedWindow.webContents.getZoomLevel();
+              focusedWindow.webContents.setZoomLevel(currentZoom - 1);
+            }
+          }
+        },
+        {
+          label: 'Zoom Normal',
+          accelerator: 'CmdOrCtrl+0',
+          click: (item, focusedWindow) => {
+            if (focusedWindow) focusedWindow.webContents.setZoomLevel(0);
+          }
+        }
+      ]
+    }
+  ];
 
-    // Ctrl+Shift+I para abrir DevTools (atajo estándar)
-    globalShortcut.register('CmdOrCtrl+Shift+I', () => {
-      const focusedWindow = BrowserWindow.getFocusedWindow();
-      if (focusedWindow) {
-        focusedWindow.webContents.openDevTools();
-      }
-    });
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 
-    console.log('⌨️ Atajos de teclado para DevTools configurados: F12, Ctrl+Shift+I');
-  } catch (error) {
-    console.error('❌ Error configurando atajos:', error);
-  }
+  console.log('⌨️ DevTools disponible: F12, Ctrl+Shift+I, Ctrl+Shift+C (o desde menú Ver)');
 
   // Inicializar auto-updater después de crear la ventana
   await setupAutoUpdater();
