@@ -138,6 +138,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return ipcRenderer.invoke('install-update');
     },
 
+    // Obtener versión actual de la app
+    getVersion: () => {
+      return ipcRenderer.invoke('app-get-version');
+    },
+
     // Escuchar evento: actualización disponible
     onUpdateAvailable: (callback) => {
       ipcRenderer.on('update-available', (event, info) => callback(info));
@@ -170,7 +175,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.removeAllListeners('update-downloaded');
       ipcRenderer.removeAllListeners('update-not-available');
       ipcRenderer.removeAllListeners('update-error');
-    }
+    },
+
+    // Verificar updates usando el backend (evita rate limit)
+    checkGitHubUpdate: () => ipcRenderer.invoke('check-github-update')
   },
 
   // 💬 APIs específicas para Discord

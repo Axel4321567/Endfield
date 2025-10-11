@@ -78,32 +78,86 @@ const AutoUpdater: React.FC = () => {
 
   const fetchCurrentVersion = async () => {
     try {
-      if (window.electronAPI?.autoUpdater) {
-        // Por ahora usamos el package.json version
-        // Podrías agregar un handler IPC para obtener app.getVersion()
-        setCurrentVersion('1.2.3'); // Temporal
+      if (window.electronAPI?.autoUpdater?.getVersion) {
+        const version = await window.electronAPI.autoUpdater.getVersion();
+        setCurrentVersion(version);
+        console.log('📦 [AutoUpdater UI] Versión actual:', version);
+      } else {
+        console.warn('⚠️ [AutoUpdater UI] getVersion no disponible');
       }
     } catch (error) {
-      console.error('Error obteniendo versión:', error);
+      console.error('❌ [AutoUpdater UI] Error obteniendo versión:', error);
     }
   };
 
   const handleCheckForUpdates = async () => {
-    if (!window.electronAPI?.autoUpdater) {
-      alert('Auto-updater no disponible en esta versión');
-      return;
-    }
-
     setStatus('checking');
     setErrorMessage('');
+    setLastChecked(new Date());
     
     try {
-      await window.electronAPI.autoUpdater.checkForUpdates();
-      console.log('🔍 [AutoUpdater UI] Verificando actualizaciones...');
+      // Verificar usando el backend (evita rate limit)
+      console.log('🔍 [AutoUpdater UI] Verificando actualizaciones desde el backend...');
+      
+      if (!window.electronAPI?.autoUpdater?.checkGitHubUpdate) {
+        throw new Error('API de actualización no disponible');
+      }
+
+      const result = await window.electronAPI.autoUpdater.checkGitHubUpdate();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Error desconocido');
+      }
+
+      const latestVersion = result.version!;
+      const currentVer = currentVersion;
+
+      console.log('📦 [AutoUpdater UI] Versión actual:', currentVer);
+      console.log('📦 [AutoUpdater UI] Última versión:', latestVersion);
+
+      // Comparar versiones correctamente (semver)
+      const compareVersions = (v1: string, v2: string): number => {
+        const parts1 = v1.split('.').map(Number);
+        const parts2 = v2.split('.').map(Number);
+        
+        for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+          const part1 = parts1[i] || 0;
+          const part2 = parts2[i] || 0;
+          
+          if (part1 > part2) return 1;
+          if (part1 < part2) return -1;
+        }
+        return 0;
+      };
+
+      const comparison = compareVersions(latestVersion, currentVer);
+
+      if (comparison > 0) {
+        // Hay actualización disponible (versión remota es mayor)
+        setStatus('available');
+        setUpdateInfo({
+          version: latestVersion,
+          releaseDate: result.releaseDate,
+          releaseNotes: result.releaseNotes || 'Nueva versión disponible'
+        });
+        console.log('🆕 [AutoUpdater UI] Nueva versión disponible:', latestVersion);
+        
+        // Iniciar descarga automática si tenemos electron-updater
+        if (window.electronAPI?.autoUpdater?.checkForUpdates) {
+          window.electronAPI.autoUpdater.checkForUpdates();
+        }
+      } else {
+        // Ya está actualizado
+        setStatus('not-available');
+        setUpdateInfo({
+          version: currentVer
+        });
+        console.log('✅ [AutoUpdater UI] Ya estás en la última versión');
+      }
     } catch (error) {
-      console.error('Error al verificar actualizaciones:', error);
+      console.error('❌ [AutoUpdater UI] Error al verificar actualizaciones:', error);
       setStatus('error');
-      setErrorMessage('Error al verificar actualizaciones');
+      setErrorMessage(error instanceof Error ? error.message : 'Error desconocido');
     }
   };
 

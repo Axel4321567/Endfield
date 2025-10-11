@@ -102,6 +102,7 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, '../src-tauri/icons/Icon.ico'),
     webPreferences: {
       preload: app.isPackaged 
         ? path.join(process.resourcesPath, 'app.asar', 'electron', 'preload.js')
@@ -634,7 +635,7 @@ ipcMain.handle('utils-show-devtools', () => {
         enableBlinkFeatures: 'PictureInPictureAPI,BackgroundVideoPlayback,MediaSession',
         autoplayPolicy: 'no-user-gesture-required'
       },
-      icon: path.join(__dirname, '../public/vite.svg'),
+      icon: path.join(__dirname, '../src-tauri/icons/Icon.ico'),
       title: 'Koko Browser - ' + url,
       show: true
     });
@@ -981,6 +982,68 @@ ipcMain.handle('get-app-version', () => {
     version: app.getVersion(),
     name: app.getName()
   };
+});
+
+ipcMain.handle('app-get-version', () => {
+  console.log('📋 [App] Obteniendo versión actual');
+  return app.getVersion();
+});
+
+// Handler para verificar actualizaciones usando el token de GitHub desde el backend
+ipcMain.handle('check-github-update', async () => {
+  console.log('🔍 [GitHub] Verificando última release...');
+  
+  try {
+    const https = await import('https');
+    
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.github.com',
+        path: '/repos/Axel4321567/Endfield/releases/latest',
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Koko-Browser',
+          'Accept': 'application/vnd.github.v3+json',
+          // Token de GitHub desde variable de entorno (no hardcodear en código)
+          ...(process.env.GH_TOKEN && { 'Authorization': `token ${process.env.GH_TOKEN}` })
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let data = '';
+
+        res.on('data', (chunk) => {
+          data += chunk;
+        });
+
+        res.on('end', () => {
+          if (res.statusCode === 200) {
+            const release = JSON.parse(data);
+            console.log('✅ [GitHub] Última release:', release.tag_name);
+            resolve({
+              success: true,
+              version: release.tag_name.replace('v', ''),
+              releaseDate: release.published_at,
+              releaseNotes: release.body?.substring(0, 200) || 'Nueva versión disponible'
+            });
+          } else {
+            console.error('❌ [GitHub] Error HTTP:', res.statusCode);
+            reject(new Error(`HTTP ${res.statusCode}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        console.error('❌ [GitHub] Error de red:', error);
+        reject(error);
+      });
+
+      req.end();
+    });
+  } catch (error) {
+    console.error('❌ [GitHub] Error general:', error);
+    return { success: false, error: error.message };
+  }
 });
 
 // ===== DATABASE MANAGEMENT IPC HANDLERS =====

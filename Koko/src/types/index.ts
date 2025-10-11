@@ -138,6 +138,14 @@ declare global {
       autoUpdater?: {
         checkForUpdates: () => Promise<{ success: boolean; message: string }>;
         installUpdate: () => Promise<{ success: boolean }>;
+        getVersion: () => Promise<string>;
+        checkGitHubUpdate: () => Promise<{ 
+          success: boolean; 
+          version?: string; 
+          releaseDate?: string; 
+          releaseNotes?: string;
+          error?: string;
+        }>;
         onUpdateAvailable: (callback: (info: {
           version: string;
           releaseDate?: string;
