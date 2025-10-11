@@ -1,0 +1,171 @@
+# 🧠 Prompt Maestro para Copilot — Creación del Lanzador Oficial de Koko Browser (Koko Launcher)
+
+Eres el ingeniero principal del proyecto **Koko Browser**.  
+Quiero que diseñes y desarrolles un **lanzador independiente (Koko Launcher)** que gestione la instalación, actualización, validación y ejecución de la aplicación principal **Koko Browser**, según la arquitectura actual documentada en ARQUITECTURA.md.
+
+---
+
+# 🎯 Objetivos del Launcher
+
+1. Separar el sistema de actualización de la app principal (Electron) en una aplicación independiente llamada **Koko Launcher**.
+2. El launcher debe:
+   - Verificar si hay actualizaciones disponibles (consultando GitHub Releases o un endpoint remoto).
+   - Descargar las nuevas versiones de Koko Browser (usando `latest.yml` y archivos `.exe` / `.blockmap`).
+   - Validar integridad (checksum o hash del archivo descargado).
+   - Instalar o reemplazar la versión anterior de manera segura.
+   - Mostrar progreso visual (descarga, validación, instalación).
+   - Lanzar la app principal (`KokoBrowser.exe`) una vez actualizada.
+3. Debe funcionar tanto en modo **standalone** como **integrado** dentro del entorno actual de distribución (NSIS + electron-builder).
+4. Mantener la coherencia visual y técnica con la arquitectura de Koko Browser (React + TailwindCSS + Electron + TypeScript).
+
+---
+
+# 🧩 Requisitos de Integración con la Arquitectura Actual
+
+- **Ubicación recomendada:** crear una nueva carpeta raíz `KokoLauncher/` paralela a `Koko/`.
+- **Stack tecnológico:** usar **Electron + React + TailwindCSS**, igual que el navegador.
+- **Comunicación entre Launcher y Browser:**
+  - El launcher ejecutará `KokoBrowser.exe` tras verificar o actualizar.
+  - Guardará logs y estado de actualización en `resources/launcher/logs/`.
+- **Compatibilidad:** debe poder actualizar también componentes adicionales:
+  - **MariaDB** (servicio local de base de datos)
+  - **HeidiSQL** (interfaz gráfica de base de datos)
+  - Archivos de configuración global (`resources/config.json`).
+- **Seguridad:** validar integridad y firmas antes de reemplazar cualquier versión.
+- **UI:** mantener estilo **glassmorphism** y colores base de Tailwind usados en Koko Browser.
+
+---
+
+# 🖥️ Estructura esperada del proyecto
+
+KokoLauncher/
+├── src/
+│   ├── components/
+│   │   ├── ProgressBar.tsx        # Barra de progreso con animación
+│   │   ├── VersionInfo.tsx        # Información de versión local/remota
+│   │   ├── UpdateButton.tsx       # Botón “Actualizar / Iniciar”
+│   │   └── LogViewer.tsx          # Visualizador de logs del launcher
+│   ├── services/
+│   │   ├── UpdateService.ts       # Descarga y validación de builds
+│   │   ├── VersionService.ts      # Comparación de versiones locales/remotas
+│   │   ├── IntegrityService.ts    # Verificación de checksums
+│   │   └── LaunchService.ts       # Ejecución de KokoBrowser.exe
+│   ├── utils/
+│   │   └── FileUtils.ts           # Lectura/escritura segura de archivos
+│   ├── main.tsx                   # Punto de entrada React
+│   └── App.tsx                    # UI principal del launcher
+│
+├── electron/
+│   ├── main.js                    # Proceso principal del launcher
+│   ├── preload.js                 # Bridge seguro main ↔ renderer
+│   └── updater/                   # Lógica de actualización
+│       ├── fetchUpdate.js
+│       ├── applyUpdate.js
+│       ├── validateFiles.js
+│       └── launchApp.js
+│
+├── resources/
+│   ├── icons/                     # Iconos del launcher
+│   └── config/                    # Configuración de actualización
+│       ├── update.json            # URLs y versión actual
+│       └── channels.json          # Canales (stable, beta, dev)
+│
+└── package.json                   # Scripts, dependencias, build
+
+---
+
+# 🚀 Funcionalidades del Launcher
+
+## 🔍 1. Verificación de versiones
+- Compara la versión local (`resources/config/update.json`) con la versión más reciente publicada en GitHub Releases.
+- Soporta canales de actualización: `stable`, `beta`, `dev`.
+- Usa la API de GitHub o un servidor remoto JSON.
+
+## 📥 2. Descarga y validación
+- Descarga los archivos de actualización (`.exe` o `.blockmap`) según el sistema actual de `electron-updater`.
+- Muestra una barra de progreso con porcentaje, velocidad y tiempo estimado.
+- Valida el hash SHA256 antes de aplicar la actualización.
+
+## 🧰 3. Instalación segura
+- Si la app está en ejecución, solicita cerrarla antes de reemplazar archivos.
+- Copia los archivos de actualización a la carpeta `dist-electron/win-unpacked`.
+- Actualiza el archivo `latest.yml` local tras instalación exitosa.
+
+## ▶️ 4. Ejecución
+- Una vez completada la actualización (o si no hay actualizaciones):
+  - Ejecuta `KokoBrowser.exe` desde la ruta local.
+  - Cierra el launcher tras verificar el proceso principal activo.
+
+## 🧠 5. Logs y diagnóstico
+- Registrar todas las acciones del launcher en `resources/launcher/logs/launcher.log`.
+- Mostrar logs en tiempo real dentro del componente `LogViewer.tsx`.
+
+---
+
+# 🎨 Interfaz del Usuario
+
+- Pantalla principal con:
+  - Logo de Koko y versión actual.
+  - Texto de estado (“Comprobando actualizaciones…”, “Descargando…”, “Listo”).
+  - Barra de progreso animada.
+  - Botón dinámico: `Actualizar`, `Reintentar`, `Iniciar`.
+  - Panel de logs expandible (toggle).
+- Animaciones fluidas usando Tailwind + Framer Motion.
+- Tema visual coherente con Koko Browser (glassmorphism, gradientes suaves, sombras 2xl).
+
+---
+
+# 🔐 Seguridad y Validación
+
+- Validar SHA256 o firma digital antes de instalar actualizaciones.
+- Comprobar permisos administrativos si se requiere reemplazar archivos del sistema.
+- Evitar descargas parciales o corruptas (hash check obligatorio).
+- Mantener aislamiento de procesos (no compartir contexto con el main de Koko Browser).
+
+---
+
+# 🧩 Integración con el Sistema Existente
+
+- El instalador NSIS incluirá:
+  - `KokoLauncher.exe` (entry point)
+  - `KokoBrowser/` (app principal)
+  - `resources/` (archivos compartidos)
+- El launcher podrá ejecutarse automáticamente tras cada actualización del navegador.
+- Permitir actualizaciones completas del ecosistema:
+  - Koko Browser
+  - MariaDB
+  - HeidiSQL
+  - Archivos de configuración (`config.json`)
+- Compatibilidad total con `electron-builder` y `auto-update` interno para parches menores.
+
+---
+
+# 🪶 Scripts de build esperados
+
+En `package.json` del launcher:
+
+- `"dev"` — Modo desarrollo (Vite + Electron con hot reload)
+- `"build"` — Compila frontend con Vite
+- `"dist"` — Empaqueta launcher completo con electron-builder
+- `"start:browser"` — Lanza la aplicación Koko Browser desde el launcher
+- `"publish"` — Publica versión del launcher en GitHub o servidor de actualizaciones
+
+---
+
+# 📘 Requisitos adicionales
+
+- Documentar todo en `LAUNCHER.md` dentro del repositorio.
+- Asegurar compatibilidad con versiones futuras de Electron.
+- Garantizar que las rutas del launcher detecten automáticamente la ubicación de Koko Browser.
+- Soportar ejecución sin internet (modo offline).
+- Ofrecer opción de forzar actualización manual (“Revisar actualizaciones ahora”).
+
+---
+
+# 🎯 Objetivo Final
+
+Crear **Koko Launcher**, una aplicación moderna, segura y visualmente coherente con Koko Browser,  
+capaz de gestionar actualizaciones, validaciones y el inicio del navegador principal.  
+
+El resultado debe ser un sistema de actualización robusto similar a los launchers de juegos modernos (Genshin Impact, Wuthering Waves o Epic Games Launcher),  
+pero optimizado para el ecosistema de Koko (Electron + React + Tailwind + TypeScript + GitHub Releases + MariaDB local).
