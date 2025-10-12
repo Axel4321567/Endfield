@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { BrowserTopBar } from './components/BrowserTopBar';
+import { TabBar } from './components/TabBar';
 import ElectronWebView from './components/ElectronWebView';
 import SpeedDial from './components/SpeedDial';
 import BookmarkManager from './components/BookmarkManager';
@@ -740,6 +741,15 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
 
   return (
     <div className="simple-koko-web">
+
+      {/* 📑 Barra de Pestañas */}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onTabSelect={switchTab}
+        onTabClose={closeTab}
+        onNewTab={handleNewTab}
+      />
 
       {/* 🎭 Panel de Control de Puppeteer Browser */}
       {isElectron && (

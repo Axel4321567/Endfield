@@ -98,16 +98,21 @@ function createOrUpdateBrowserView(url) {
     mainWindow.webContents.executeJavaScript(`
       (() => {
         const sidebar = document.querySelector('.sidebar-container');
-        const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+        const controlPanel = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+        const tabBar = document.querySelector('.tab-bar');
         
         // Obtener ancho del sidebar (280px normal, 72px colapsado)
         const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
         
-        // Obtener altura del header del navegador
-        const headerHeight = header ? header.offsetHeight : 60;
+        // Obtener altura del header del navegador (tab bar + control panel)
+        const tabBarHeight = tabBar ? tabBar.offsetHeight : 48; // Fallback 48px
+        const controlPanelHeight = controlPanel ? controlPanel.offsetHeight : 60; // Fallback 60px
+        const headerHeight = tabBarHeight + controlPanelHeight;
         
         console.log('📏 [BrowserView] Dimensiones detectadas:', {
           sidebarWidth,
+          controlPanelHeight,
+          tabBarHeight,
           headerHeight,
           sidebarCollapsed: sidebar?.classList.contains('collapsed')
         });
@@ -127,13 +132,14 @@ function createOrUpdateBrowserView(url) {
       currentBrowserView.setBounds(newBounds);
     }).catch((error) => {
       console.warn('⚠️ [BrowserView] Error obteniendo dimensiones, usando fallback:', error.message);
-      // Fallback con dimensiones por defecto
+      // Fallback con dimensiones por defecto (TabBar 48px + Control Panel 60px = 108px)
       const bounds = mainWindow.getContentBounds();
+      const fallbackHeaderHeight = 108; // 48px (TabBar) + 60px (Control Panel)
       currentBrowserView.setBounds({
         x: 280,
-        y: 60,
+        y: fallbackHeaderHeight,
         width: bounds.width - 280,
-        height: bounds.height - 60
+        height: bounds.height - fallbackHeaderHeight
       });
     });
   };
@@ -356,9 +362,12 @@ export function registerPuppeteerBrowserHandlers(window) {
             const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
               (() => {
                 const sidebar = document.querySelector('.sidebar-container');
-                const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const controlPanel = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const tabBar = document.querySelector('.tab-bar');
                 const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
-                const headerHeight = header ? header.offsetHeight : 60;
+                const tabBarHeight = tabBar ? tabBar.offsetHeight : 48;
+                const controlPanelHeight = controlPanel ? controlPanel.offsetHeight : 60;
+                const headerHeight = tabBarHeight + controlPanelHeight;
                 return { sidebarWidth, headerHeight };
               })()
             `);
@@ -405,9 +414,12 @@ export function registerPuppeteerBrowserHandlers(window) {
             mainWindow.webContents.executeJavaScript(`
               (() => {
                 const sidebar = document.querySelector('.sidebar-container');
-                const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const controlPanel = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const tabBar = document.querySelector('.tab-bar');
                 const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
-                const headerHeight = header ? header.offsetHeight : 60;
+                const tabBarHeight = tabBar ? tabBar.offsetHeight : 48;
+                const controlPanelHeight = controlPanel ? controlPanel.offsetHeight : 60;
+                const headerHeight = tabBarHeight + controlPanelHeight;
                 return { sidebarWidth, headerHeight };
               })()
             `).then(({ sidebarWidth, headerHeight }) => {
@@ -423,11 +435,12 @@ export function registerPuppeteerBrowserHandlers(window) {
             }).catch((error) => {
               if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
                 const bounds = mainWindow.getContentBounds();
+                const fallbackHeaderHeight = 108; // 48px (TabBar) + 60px (Control Panel)
                 currentBrowserView.setBounds({
                   x: 280,
-                  y: 60,
+                  y: fallbackHeaderHeight,
                   width: bounds.width - 280,
-                  height: bounds.height - 60
+                  height: bounds.height - fallbackHeaderHeight
                 });
               }
             });
