@@ -1,0 +1,17 @@
+# 🔍 Google Search Proxy - Dependencies
+# Instalación: pip install -r requirements.txt
+
+# Framework web asíncrono
+fastapi==0.115.5
+
+# Servidor ASGI de alto rendimiento
+uvicorn[standard]==0.34.0
+
+# Cliente HTTP para peticiones a Google
+requests==2.32.3
+
+# Utilidades adicionales (opcional)
+python-multipart==0.0.20
+
+# Para mejor logging (opcional)
+python-json-logger==3.2.1

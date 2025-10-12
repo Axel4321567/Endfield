@@ -4,6 +4,8 @@ import { useLogger } from '../../contexts/LogsContext';
 import { useMariaDB } from '../../hooks/useMariaDB';
 import { usePhp } from '../../hooks/usePhp';
 import { usePhpMyAdmin } from '../../hooks/usePhpMyAdmin';
+import { useSearchProxy } from '../../hooks/useSearchProxy';
+import { useChromium } from '../../hooks/useChromium';
 import './DatabaseManager.css';
 
 interface DatabaseManagerProps {
@@ -20,6 +22,8 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
   const mariadb = useMariaDB();
   const php = usePhp();
   const phpMyAdmin = usePhpMyAdmin();
+  const searchProxy = useSearchProxy();
+  const chromium = useChromium();
   
   // Estados locales de UI
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -42,8 +46,10 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
       mariadb.loadStatus();
       php.loadStatus();
       phpMyAdmin.loadStatus();
+      searchProxy.loadStatus();
+      chromium.loadStatus();
     }
-  }, [mariadb, php, phpMyAdmin, addLog]);
+  }, [mariadb, php, phpMyAdmin, searchProxy, chromium, addLog]);
 
   // Auto-refresh cada 10 segundos
   useEffect(() => {
@@ -53,10 +59,12 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
       mariadb.loadStatus();
       php.loadStatus();
       phpMyAdmin.loadStatus();
+      searchProxy.loadStatus();
+      chromium.loadStatus();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, mariadb, php, phpMyAdmin]);
+  }, [autoRefresh, mariadb, php, phpMyAdmin, searchProxy, chromium]);
 
   // Helper functions
   const getDebugStatusColor = () => {
@@ -226,311 +234,249 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
         </div>
       )}
 
-      {/* Panel de MariaDB */}
-      <div className="database-manager__debug">
-        <div className="database-manager__debug-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <h3>🗄️ MariaDB</h3>
-            
-            {/* MariaDB Status y botones integrados en el header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {mariadb.status?.installed ? (
-                <>
+      {/* Tabla MySQL unificada */}
+      <div className="database-manager__mysql-table">
+        <div className="database-manager__table-header">
+          <h3>Lista de Servicios</h3>
+        </div>
+        
+        <table className="database-manager__table">
+          <thead>
+            <tr>
+              <th>Servicio</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Fila MariaDB */}
+            <tr>
+              <td className="database-manager__service-name">
+                <span className="database-manager__service-icon">🗄️</span>
+                MariaDB
+              </td>
+              <td>
+                {mariadb.status?.installed ? (
                   <div className={`database-manager__status-badge database-manager__status-badge--${mariadb.status.status === 'running' ? 'running' : 'stopped'}`}>
-                    {mariadb.status.status === 'running' ? '🟢 Ejecutándose' : '🔴 Detenido'}
+                    {mariadb.status.status === 'running' ? '🟢 EJECUTÁNDOSE' : '🔴 DETENIDO'}
                   </div>
-                  
-                  {mariadb.status.status === 'stopped' && (
-                    <button
-                      onClick={mariadb.start}
-                      disabled={mariadb.loading}
-                      className="database-manager__btn database-manager__btn--start"
-                    >
-                      {mariadb.loading ? '⏳ Iniciando...' : '▶️ Iniciar'}
-                    </button>
-                  )}
-
-                  {mariadb.status.status === 'running' && (
-                    <button
-                      onClick={mariadb.stop}
-                      disabled={mariadb.loading}
-                      className="database-manager__btn database-manager__btn--stop"
-                    >
-                      {mariadb.loading ? '⏳ Deteniendo...' : '⏹️ Detener'}
-                    </button>
-                  )}
-
-                  <button
-                    onClick={mariadb.uninstall}
-                    disabled={mariadb.loading}
-                    className="database-manager__btn database-manager__btn--uninstall"
-                    title="Desinstalar MariaDB del sistema"
-                  >
-                    {mariadb.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
-                  </button>
-                </>
-              ) : (
-                <>
+                ) : (
                   <div className="database-manager__status-badge database-manager__status-badge--stopped">
-                    🔴 No instalado
+                    🔴 NO INSTALADO
                   </div>
+                )}
+              </td>
+              <td className="database-manager__actions">
+                {mariadb.status?.installed ? (
+                  <>
+                    {mariadb.status.status === 'stopped' && (
+                      <button
+                        onClick={mariadb.start}
+                        disabled={mariadb.loading}
+                        className="database-manager__btn database-manager__btn--start"
+                      >
+                        {mariadb.loading ? '⏳ Iniciando...' : '▶️ Iniciar'}
+                      </button>
+                    )}
+                    {mariadb.status.status === 'running' && (
+                      <button
+                        onClick={mariadb.stop}
+                        disabled={mariadb.loading}
+                        className="database-manager__btn database-manager__btn--stop"
+                      >
+                        {mariadb.loading ? '⏳ Deteniendo...' : '⏹️ Detener'}
+                      </button>
+                    )}
+                    <button
+                      onClick={mariadb.uninstall}
+                      disabled={mariadb.loading}
+                      className="database-manager__btn database-manager__btn--uninstall"
+                      title="Desinstalar MariaDB"
+                    >
+                      🗑️ Desinstalar
+                    </button>
+                  </>
+                ) : (
                   <button
                     onClick={mariadb.install}
                     disabled={mariadb.loading}
                     className="database-manager__btn database-manager__btn--install"
                   >
                     {mariadb.downloadProgress 
-                      ? `📥 ${mariadb.downloadProgress.phase} (${mariadb.downloadProgress.progress}%)`
+                      ? `📥 ${mariadb.downloadProgress.progress}%`
                       : mariadb.loading 
                         ? '⏳ Instalando...' 
                         : '📥 Instalar'
                     }
                   </button>
-                </>
-              )}
-              
-              <button 
-                className="database-manager__help-toggle"
-                onClick={() => setShowSystemState(!showSystemState)}
-              >
-                {showSystemState ? '▼' : '▶'}
-              </button>
-            </div>
-          </div>
-        </div>
-        {showSystemState && (
-        <>
-        <div className="database-manager__debug-grid">
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Instalado:</span>
-            <span className={`database-manager__debug-value ${mariadb.status?.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {mariadb.status?.installed ? '✅ Sí' : '❌ No'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Estado:</span>
-            <span className={`database-manager__debug-value database-manager__debug-value--${getDebugStatusColor()}`}>
-              {mariadb.status?.status || 'desconocido'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">API:</span>
-            <span className={`database-manager__debug-value ${mariadb.status?.success ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {mariadb.status?.success ? '✅ Conectada' : '❌ Error'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Versión:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {mariadb.status?.version || 'N/A'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Cargando:</span>
-            <span className={`database-manager__debug-value ${mariadb.loading ? 'database-manager__debug-value--warning' : 'database-manager__debug-value--neutral'}`}>
-              {mariadb.loading ? '⏳ Sí' : '✅ No'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Servicio:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {mariadb.status?.serviceName || 'MariaDB'}
-            </span>
-          </div>
-        </div>
-
-        {mariadb.info && mariadb.info.success && (
-          <div className="database-manager__info" style={{ marginTop: '0.5rem' }}>
-            <div className="database-manager__info-grid">
-              <div className="database-manager__info-item">
-                <span className="database-manager__info-label">Host:</span>
-                <span className="database-manager__info-value">{mariadb.info.host}</span>
-              </div>
-              <div className="database-manager__info-item">
-                <span className="database-manager__info-label">Puerto:</span>
-                <span className="database-manager__info-value">{mariadb.info.port}</span>
-              </div>
-              <div className="database-manager__info-item">
-                <span className="database-manager__info-label">Base de datos:</span>
-                <span className="database-manager__info-value">{mariadb.info.database}</span>
-              </div>
-              <div className="database-manager__info-item">
-                <span className="database-manager__info-label">Tiempo activo:</span>
-                <span className="database-manager__info-value">{formatUptime(mariadb.info.uptime)}</span>
-              </div>
-            </div>
-          </div>
-        )}
-        </>
-        )}
-      </div>
-
-      {/* Panel de PHP */}
-      <div className="database-manager__debug">
-        <div className="database-manager__debug-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <h3>🐘 PHP</h3>
+                )}
+              </td>
+            </tr>
             
-            {/* PHP Status y botones integrados en el header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className={`database-manager__status-badge database-manager__status-badge--${php.installed ? 'running' : 'stopped'}`}>
-                {php.installed ? '🟢 Instalado' : '🔴 No instalado'}
-              </div>
-              
-              {!php.installed && (
-                <button
-                  onClick={php.install}
-                  disabled={php.loading}
-                  className="database-manager__btn database-manager__btn--install"
-                >
-                  {php.loading ? '⏳ Instalando...' : '📥 Instalar'}
-                </button>
-              )}
-
-              {php.installed && (
-                <button
-                  onClick={php.uninstall}
-                  disabled={php.loading}
-                  className="database-manager__btn database-manager__btn--uninstall"
-                  title="Desinstalar PHP"
-                >
-                  {php.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
-                </button>
-              )}
-              
-              <button 
-                className="database-manager__help-toggle"
-                onClick={() => setShowPhpState(!showPhpState)}
-              >
-                {showPhpState ? '▼' : '▶'}
-              </button>
-            </div>
-          </div>
-        </div>
-        {showPhpState && (
-        <>
-        <div className="database-manager__debug-grid">
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Instalado:</span>
-            <span className={`database-manager__debug-value ${php.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {php.installed ? '✅ Sí' : '❌ No'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Versión:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {php.version || 'N/A'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Path:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={php.path || 'N/A'}>
-              {php.path ? php.path.substring(php.path.lastIndexOf('\\') + 1) : 'N/A'}
-            </span>
-          </div>
-        </div>
-        </>
-        )}
-      </div>
-
-      {/* Barra de progreso de phpMyAdmin */}
-      {phpMyAdmin.downloadProgress && (
-        <div className="database-manager__progress">
-          <div className="database-manager__progress-header">
-            <span className="database-manager__progress-text">
-              {phpMyAdmin.downloadProgress.phase}
-            </span>
-            <span className="database-manager__progress-percent">
-              {phpMyAdmin.downloadProgress.progress}%
-            </span>
-          </div>
-          <div className="database-manager__progress-bar">
-            <div 
-              className="database-manager__progress-fill"
-              style={{ width: `${phpMyAdmin.downloadProgress.progress}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Panel de phpMyAdmin */}
-      <div className="database-manager__debug">
-        <div className="database-manager__debug-header">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <h3>🌐 phpMyAdmin</h3>
+            {/* Fila PHP */}
+            <tr>
+              <td className="database-manager__service-name">
+                <span className="database-manager__service-icon">🐘</span>
+                PHP
+              </td>
+              <td>
+                <div className={`database-manager__status-badge database-manager__status-badge--${php.installed ? 'running' : 'stopped'}`}>
+                  {php.installed ? '🟢 INSTALADO' : '🔴 NO INSTALADO'}
+                </div>
+              </td>
+              <td className="database-manager__actions">
+                {!php.installed ? (
+                  <button
+                    onClick={php.install}
+                    disabled={php.loading}
+                    className="database-manager__btn database-manager__btn--install"
+                  >
+                    {php.loading ? '⏳ Instalando...' : '📥 Instalar'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={php.uninstall}
+                    disabled={php.loading}
+                    className="database-manager__btn database-manager__btn--uninstall"
+                    title="Desinstalar PHP"
+                  >
+                    🗑️ Desinstalar
+                  </button>
+                )}
+              </td>
+            </tr>
             
-            {/* phpMyAdmin Status y botones integrados en el header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className={`database-manager__status-badge database-manager__status-badge--${phpMyAdmin.installed ? 'running' : 'stopped'}`}>
-                {phpMyAdmin.installed ? '🟢 Instalado' : '🔴 No instalado'}
-              </div>
-              
-              {!phpMyAdmin.installed && (
-                <button
-                  onClick={phpMyAdmin.install}
-                  disabled={phpMyAdmin.loading}
-                  className="database-manager__btn database-manager__btn--install"
-                >
-                  {phpMyAdmin.downloadProgress 
-                    ? `📥 ${phpMyAdmin.downloadProgress.phase} (${phpMyAdmin.downloadProgress.progress}%)`
-                    : phpMyAdmin.loading 
-                      ? '⏳ Instalando...' 
-                      : '📥 Instalar'
-                  }
-                </button>
-              )}
-
-              {phpMyAdmin.installed && (
-                <button
-                  onClick={phpMyAdmin.uninstall}
-                  disabled={phpMyAdmin.loading}
-                  className="database-manager__btn database-manager__btn--uninstall"
-                  title="Desinstalar phpMyAdmin"
-                >
-                  {phpMyAdmin.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
-                </button>
-              )}
-              
-              <button 
-                className="database-manager__help-toggle"
-                onClick={() => setShowPhpMyAdminState(!showPhpMyAdminState)}
-              >
-                {showPhpMyAdminState ? '▼' : '▶'}
-              </button>
-            </div>
-          </div>
-        </div>
-        {showPhpMyAdminState && (
-        <>
-        <div className="database-manager__debug-grid">
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Instalado:</span>
-            <span className={`database-manager__debug-value ${phpMyAdmin.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {phpMyAdmin.installed ? '✅ Sí' : '❌ No'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Versión:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {phpMyAdmin.version || 'N/A'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Path:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={phpMyAdmin.path || 'N/A'}>
-              {phpMyAdmin.path ? phpMyAdmin.path.substring(phpMyAdmin.path.lastIndexOf('\\') + 1) : 'N/A'}
-            </span>
-          </div>
-          <div className="database-manager__debug-item">
-            <span className="database-manager__debug-label">Config:</span>
-            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={phpMyAdmin.configPath || 'N/A'}>
-              {phpMyAdmin.configPath ? '✅ Configurado' : '❌ No configurado'}
-            </span>
-          </div>
-        </div>
-        </>
-        )}
+            {/* Fila phpMyAdmin */}
+            <tr>
+              <td className="database-manager__service-name">
+                <span className="database-manager__service-icon">🌐</span>
+                phpMyAdmin
+              </td>
+              <td>
+                <div className={`database-manager__status-badge database-manager__status-badge--${phpMyAdmin.installed ? 'running' : 'stopped'}`}>
+                  {phpMyAdmin.installed ? '🟢 INSTALADO' : '🔴 NO INSTALADO'}
+                </div>
+              </td>
+              <td className="database-manager__actions">
+                {!phpMyAdmin.installed ? (
+                  <button
+                    onClick={phpMyAdmin.install}
+                    disabled={phpMyAdmin.loading}
+                    className="database-manager__btn database-manager__btn--install"
+                  >
+                    {phpMyAdmin.downloadProgress 
+                      ? `📥 ${phpMyAdmin.downloadProgress.progress}%`
+                      : phpMyAdmin.loading 
+                        ? '⏳ Instalando...' 
+                        : '📥 Instalar'
+                    }
+                  </button>
+                ) : (
+                  <button
+                    onClick={phpMyAdmin.uninstall}
+                    disabled={phpMyAdmin.loading}
+                    className="database-manager__btn database-manager__btn--uninstall"
+                    title="Desinstalar phpMyAdmin"
+                  >
+                    🗑️ Desinstalar
+                  </button>
+                )}
+              </td>
+            </tr>
+            
+            {/* Fila Search Proxy */}
+            <tr>
+              <td className="database-manager__service-name">
+                <span className="database-manager__service-icon">🔍</span>
+                Search Proxy
+              </td>
+              <td>
+                <div className={`database-manager__status-badge database-manager__status-badge--${searchProxy.running ? 'running' : 'stopped'}`}>
+                  {searchProxy.running ? '� EJECUTÁNDOSE' : '�🔴 DETENIDO'}
+                </div>
+              </td>
+              <td className="database-manager__actions">
+                {!searchProxy.running ? (
+                  <button
+                    onClick={searchProxy.start}
+                    disabled={searchProxy.loading}
+                    className="database-manager__btn database-manager__btn--start"
+                  >
+                    {searchProxy.loading ? '⏳ Iniciando...' : '▶️ Iniciar'}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={searchProxy.stop}
+                      disabled={searchProxy.loading}
+                      className="database-manager__btn database-manager__btn--stop"
+                    >
+                      {searchProxy.loading ? '⏳ Deteniendo...' : '⏹️ Detener'}
+                    </button>
+                    <button
+                      onClick={searchProxy.restart}
+                      disabled={searchProxy.loading}
+                      className="database-manager__btn database-manager__btn--install"
+                      title="Reiniciar Search Proxy"
+                    >
+                      🔄 Reiniciar
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+            
+            {/* Fila Chromium */}
+            <tr>
+              <td className="database-manager__service-name">
+                <span className="database-manager__service-icon">🌐</span>
+                Chromium
+              </td>
+              <td>
+                <div className={`database-manager__status-badge database-manager__status-badge--${chromium.installed ? 'running' : 'stopped'}`}>
+                  {chromium.installed ? '� INSTALADO' : '�🔴 NO INSTALADO'}
+                </div>
+              </td>
+              <td className="database-manager__actions">
+                {!chromium.installed ? (
+                  <button
+                    onClick={chromium.download}
+                    disabled={chromium.loading}
+                    className="database-manager__btn database-manager__btn--install"
+                  >
+                    {chromium.downloadProgress 
+                      ? `📥 ${chromium.downloadProgress.progress}%`
+                      : chromium.loading 
+                        ? '⏳ Descargando...' 
+                        : '📥 Descargar'
+                    }
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={chromium.verify}
+                      disabled={chromium.loading}
+                      className="database-manager__btn database-manager__btn--start"
+                      title="Verificar integridad de Chromium"
+                    >
+                      {chromium.loading ? '⏳ Verificando...' : '✓ Verificar'}
+                    </button>
+                    <button
+                      onClick={chromium.uninstall}
+                      disabled={chromium.loading}
+                      className="database-manager__btn database-manager__btn--uninstall"
+                      title="Desinstalar Chromium"
+                    >
+                      🗑️ Desinstalar
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
+      
     </div>
   );
 };

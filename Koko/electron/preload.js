@@ -464,6 +464,127 @@ contextBridge.exposeInMainWorld('electronAPI', {
       ipcRenderer.on('credential-capture:event', listener);
       return () => ipcRenderer.removeListener('credential-capture:event', listener);
     }
+  },
+
+  // 🔍 APIs de Google Search Proxy (BrowserView seguro)
+  searchProxy: {
+    // Verificar salud del proxy FastAPI
+    checkHealth: () => {
+      console.log('🏥 [SearchProxy] Verificando salud del proxy');
+      return ipcRenderer.invoke('search-proxy:health');
+    },
+
+    // Realizar búsqueda y mostrar en BrowserView
+    search: (query) => {
+      console.log('🔍 [SearchProxy] Buscando:', query);
+      return ipcRenderer.invoke('search-proxy:search', query);
+    },
+
+    // Obtener metadata de búsqueda (JSON)
+    searchJson: (query) => {
+      console.log('📊 [SearchProxy] Obteniendo metadata de:', query);
+      return ipcRenderer.invoke('search-proxy:search-json', query);
+    },
+
+    // Mostrar BrowserView de búsqueda
+    show: (bounds) => {
+      console.log('👁️ [SearchProxy] Mostrando BrowserView');
+      return ipcRenderer.invoke('search-proxy:show', bounds);
+    },
+
+    // Ocultar BrowserView de búsqueda
+    hide: () => {
+      console.log('🙈 [SearchProxy] Ocultando BrowserView');
+      return ipcRenderer.invoke('search-proxy:hide');
+    },
+
+    // Navegar a URL en BrowserView
+    navigate: (url) => {
+      console.log('🧭 [SearchProxy] Navegando a:', url);
+      return ipcRenderer.invoke('search-proxy:navigate', url);
+    }
+  },
+
+  // 🌐 APIs de Chromium Browser
+  chromium: {
+    // Obtener estado de instalación
+    getStatus: () => {
+      console.log('📊 [Chromium] Obteniendo estado');
+      return ipcRenderer.invoke('chromium-status');
+    },
+
+    // Descargar e instalar Chromium
+    download: () => {
+      console.log('📥 [Chromium] Iniciando descarga');
+      return ipcRenderer.invoke('chromium-download');
+    },
+
+    // Lanzar Chromium con URL
+    launch: (url) => {
+      console.log('🚀 [Chromium] Lanzando navegador:', url);
+      return ipcRenderer.invoke('chromium-launch', url);
+    },
+
+    // Cerrar Chromium
+    close: () => {
+      console.log('🔴 [Chromium] Cerrando navegador');
+      return ipcRenderer.invoke('chromium-close');
+    },
+
+    // Verificar integridad
+    verify: () => {
+      console.log('✅ [Chromium] Verificando integridad');
+      return ipcRenderer.invoke('chromium-verify');
+    },
+
+    // Desinstalar Chromium
+    uninstall: () => {
+      console.log('🗑️ [Chromium] Desinstalando');
+      return ipcRenderer.invoke('chromium-uninstall');
+    },
+
+    // Limpiar caché
+    clearCache: () => {
+      console.log('🧹 [Chromium] Limpiando caché');
+      return ipcRenderer.invoke('chromium-clear-cache');
+    },
+
+    // Escuchar progreso de descarga
+    onDownloadProgress: (callback) => {
+      const listener = (event, data) => callback(data);
+      ipcRenderer.on('chromium-download-progress', listener);
+      return () => ipcRenderer.removeListener('chromium-download-progress', listener);
+    }
+  },
+
+  // 🎭 APIs de Puppeteer Browser Embebido
+  puppeteerBrowser: {
+    // Abrir URL en navegador embebido
+    open: (url) => {
+      console.log('🌐 [Puppeteer] Abriendo URL embebida:', url);
+      return ipcRenderer.invoke('puppeteer-open', url);
+    },
+
+    // Cerrar navegador embebido
+    close: () => {
+      console.log('🔴 [Puppeteer] Cerrando navegador embebido');
+      return ipcRenderer.invoke('puppeteer-close');
+    },
+
+    // Obtener estado del navegador
+    getStatus: () => {
+      console.log('📊 [Puppeteer] Obteniendo estado');
+      return ipcRenderer.invoke('puppeteer-status');
+    }
+  },
+  
+  // 📐 APIs de gestión de layout
+  app: {
+    // Notificar cambios en el sidebar (colapsar/expandir)
+    notifySidebarChange: () => {
+      console.log('🔔 [App] Notificando cambio en sidebar');
+      return ipcRenderer.invoke('notify-sidebar-change');
+    }
   }
 });
 
@@ -489,3 +610,6 @@ console.log('✅ [PHP] APIs de PHP disponibles en window.electron.ipcRenderer');
 console.log('✅ [phpMyAdmin] APIs de phpMyAdmin disponibles en window.electronAPI.phpMyAdmin');
 console.log('✅ [PasswordManager] APIs de gestor de contraseñas disponibles en window.electronAPI.passwordManager');
 console.log('✅ [CredentialCapture] APIs de captura de credenciales disponibles en window.electronAPI.credentialCapture');
+console.log('✅ [SearchProxy] APIs de búsqueda segura disponibles en window.electronAPI.searchProxy');
+console.log('✅ [Chromium] APIs de navegador Chromium disponibles en window.electronAPI.chromium');
+console.log('✅ [Puppeteer] APIs de navegador embebido disponibles en window.electronAPI.puppeteerBrowser');

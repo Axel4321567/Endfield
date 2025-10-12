@@ -3,59 +3,20 @@ import { BrowserTopBar } from './components/BrowserTopBar';
 import ElectronWebView from './components/ElectronWebView';
 import SpeedDial from './components/SpeedDial';
 import BookmarkManager from './components/BookmarkManager';
-import { searchGoogle } from '../../APIs/GoogleSearchAPI';
-import type { GoogleSearchResult } from '../../APIs/GoogleSearchAPI';
-import { processSearchResults } from '../../APIs/SearchAutomation';
+
 import type { TabsManager, Tab } from '../../types';
 import './SimpleKokoWeb.css';
 
-interface SimpleKokoWebProps {
-  tabsManager: TabsManager;
+// Tipos para resultados de búsqueda (mantenidos para compatibilidad)
+interface GoogleSearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+  displayLink: string;
 }
 
-// Declarar tipos para Electron API
-declare global {
-  interface Window {
-    electronAPI?: {
-      isElectron: boolean;
-      webview: {
-        navigate: (url: string) => Promise<void>;
-        goBack: () => Promise<void>;
-        goForward: () => Promise<void>;
-        reload: () => Promise<void>;
-      };
-      app: {
-        quit: () => Promise<void>;
-        closeWindow: () => Promise<void>;
-        minimize: () => Promise<void>;
-        getStatus: () => Promise<any>;
-      };
-      // 🧠 Nueva API de navegación inteligente
-      navigation: {
-        openBrowserTab: (url: string) => Promise<{
-          success: boolean;
-          method: 'external-window' | 'internal-webview';
-          url: string;
-        }>;
-        openExternalPage: (url: string) => Promise<{
-          success: boolean;
-          method: 'external-window' | 'internal-webview';
-          url: string;
-          windowId?: number;
-          reason: string;
-        }>;
-        createNewTab: (url: string, title?: string) => Promise<{
-          success: boolean;
-          url: string;
-          title?: string;
-        }>;
-        onNavigateInWebview: (callback: (event: any, url: string) => void) => void;
-        removeNavigateInWebviewListener: () => void;
-        onCreateNewTab: (callback: (event: any, url: string, title?: string) => void) => void;
-        removeCreateNewTabListener: () => void;
-      };
-    };
-  }
+interface SimpleKokoWebProps {
+  tabsManager: TabsManager;
 }
 
 export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsManager }) => {
@@ -64,12 +25,18 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   const webviewRef = useRef<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
+  // Estado para Puppeteer Browser embebido
+  const [puppeteerUrl, setPuppeteerUrl] = useState('https://www.google.com');
+  const [isPuppeteerOpen, setIsPuppeteerOpen] = useState(false);
+  const [isPuppeteerLoading, setIsPuppeteerLoading] = useState(false);
+  
   // Estado para búsqueda integrada
   const [searchResults, setSearchResults] = useState<GoogleSearchResult[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [loadingTimeouts, setLoadingTimeouts] = useState<Map<string, number>>(new Map());
+  const [isProxyAvailable, setIsProxyAvailable] = useState<boolean | null>(null); // null = checking
 
   // Función para detectar si una consulta es una búsqueda (SOLO para input directo del usuario)
   const isSearchQuery = (input: string): boolean => {
@@ -122,7 +89,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     
     if (!actualQuery) return;
     
-    console.log('🔍 Realizando búsqueda integrada:', {
+    console.log('🔍 Realizando búsqueda con BrowserView seguro:', {
       original: queryOrUrl,
       extracted: actualQuery
     });
@@ -132,17 +99,67 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     setIsSearchMode(true);
     
     try {
-      const results = await searchGoogle(actualQuery, { num: 10 });
-      setSearchResults(results);
+      // Verificar si estamos en Electron
+      if (!isElectron || !window.electronAPI?.searchProxy) {
+        console.warn('⚠️ No estamos en Electron, usando navegación directa');
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(actualQuery)}`;
+        if (activeTab) {
+          navigateTab(activeTab.id, googleUrl);
+        }
+        setIsSearchMode(false);
+        return;
+      }
       
-      // Procesar resultados para analytics
-      await processSearchResults(actualQuery, results);
+      // Verificar salud del proxy
+      const healthCheck = await window.electronAPI.searchProxy.checkHealth();
       
-      console.log('✅ Búsqueda completada:', results.length, 'resultados');
+      if (!healthCheck.success) {
+        console.warn('⚠️ Proxy no disponible:', healthCheck.error);
+        setIsProxyAvailable(false);
+        
+        // Fallback: navegar directamente a Google
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(actualQuery)}`;
+        if (activeTab) {
+          navigateTab(activeTab.id, googleUrl);
+        }
+        setIsSearchMode(false);
+        return;
+      }
+      
+      setIsProxyAvailable(true);
+      
+      // Realizar búsqueda usando BrowserView seguro
+      const searchResult = await window.electronAPI.searchProxy.search(actualQuery);
+      
+      if (!searchResult.success) {
+        console.error('❌ Error en búsqueda:', searchResult.error);
+        
+        // Fallback a navegación directa
+        const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(actualQuery)}`;
+        if (activeTab) {
+          navigateTab(activeTab.id, googleUrl);
+        }
+        setIsSearchMode(false);
+        return;
+      }
+      
+      console.log('✅ Búsqueda cargada en BrowserView:', searchResult.htmlLength, 'bytes');
+      
+      // El HTML ya está cargado en el BrowserView de Electron
+      // No necesitamos mostrarlo en React, solo actualizar el estado
+      setIsSearchMode(false);
+      setSearchResults([]);
+      
     } catch (error) {
       console.error('❌ Error en búsqueda integrada:', error);
-      // En caso de error, mostrar resultados mock
-      setSearchResults([]);
+      setIsProxyAvailable(false);
+      
+      // Fallback a navegación directa
+      const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(actualQuery)}`;
+      if (activeTab) {
+        navigateTab(activeTab.id, googleUrl);
+      }
+      setIsSearchMode(false);
     } finally {
       setIsSearching(false);
     }
@@ -353,6 +370,50 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     };
   }, [createNewTab]);
 
+  // Función para abrir URL en Puppeteer Browser embebido
+  const openInPuppeteerBrowser = async (url: string) => {
+    if (!window.electronAPI?.puppeteerBrowser) {
+      console.warn('⚠️ [Puppeteer] API no disponible');
+      return false;
+    }
+
+    setIsPuppeteerLoading(true);
+    
+    try {
+      const result = await window.electronAPI.puppeteerBrowser.open(url);
+      
+      if (result.success) {
+        console.log('✅ [Puppeteer] URL abierta:', url);
+        setIsPuppeteerOpen(true);
+        setPuppeteerUrl(url);
+        return true;
+      } else {
+        console.error('❌ [Puppeteer] Error:', result.error);
+        alert(`Error al abrir en navegador embebido: ${result.error}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ [Puppeteer] Error:', error);
+      alert('Error al abrir navegador embebido');
+      return false;
+    } finally {
+      setIsPuppeteerLoading(false);
+    }
+  };
+
+  // Función para cerrar Puppeteer Browser
+  const closePuppeteerBrowser = async () => {
+    if (!window.electronAPI?.puppeteerBrowser) return;
+
+    try {
+      await window.electronAPI.puppeteerBrowser.close();
+      setIsPuppeteerOpen(false);
+      console.log('🔴 [Puppeteer] Navegador cerrado');
+    } catch (error) {
+      console.error('❌ [Puppeteer] Error al cerrar:', error);
+    }
+  };
+
   const handleNavigate = async (tabId: string, url: string) => {
     try {
       console.log('🚀 [Koko-Web] Navegación detectada →', {
@@ -362,6 +423,18 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
         activeTabId: activeTabId,
         source: 'handleNavigate'
       });
+
+      // 🎭 Usar SOLO Puppeteer Browser embebido
+      if (isElectron && window.electronAPI?.puppeteerBrowser) {
+        console.log('🎭 [Puppeteer] Usando navegador embebido');
+        await openInPuppeteerBrowser(url);
+        return; // ⚡ SALIR - Solo Puppeteer
+      }
+      
+      // Si no hay Electron, mostrar mensaje
+      console.warn('⚠️ Puppeteer no disponible, ejecuta con Electron');
+      alert('Por favor, ejecuta la aplicación con Electron para usar el navegador embebido.');
+      return;
       
       // 🔍 VERIFICACIÓN CRÍTICA: Solo interceptar si realmente es una búsqueda sin formato
       if (isSearchQuery(url)) {
@@ -633,199 +706,87 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   };
 
   const renderWebContent = () => {
-    // 🔍 NUEVA FUNCIONALIDAD: Mostrar resultados de búsqueda integrada
-    if (isSearchMode) {
+    // Mostrar indicador del navegador embebido
+    if (isPuppeteerOpen) {
       return (
-        <div className="search-results-container">
-          <div className="search-header">
-            <h2>🔍 Resultados para: "{searchQuery}"</h2>
-            <button onClick={exitSearchMode} className="exit-search-btn">
-              ✕ Volver al navegador
-            </button>
-          </div>
-          
-          {isSearching ? (
-            <div className="search-loading">
-              <div className="loading-spinner"></div>
-              <p>Buscando...</p>
-            </div>
-          ) : (
-            <div className="search-results">
-              {searchResults.length > 0 ? (
-                searchResults.map((result, index) => (
-                  <div 
-                    key={index} 
-                    className="search-result-item"
-                    onClick={() => handleSearchResultClick(result)}
-                  >
-                    <div className="result-url">{result.displayLink}</div>
-                    <h3 className="result-title">{result.title}</h3>
-                    <p className="result-snippet">{result.snippet}</p>
-                  </div>
-                ))
-              ) : (
-                <div className="no-results">
-                  <p>No se encontraron resultados para "{searchQuery}"</p>
-                  <button onClick={exitSearchMode}>Volver al navegador</button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Sin logs para evitar bucles - renderizado silencioso
-    if (tabs.length === 0) {
-      return (
-        <div className="no-active-tab">
-          <div className="welcome-message">
-            <h2>🌐 Bienvenido a Koko Web</h2>
-            <p>Crea una nueva pestaña para comenzar a navegar</p>
-            <button onClick={handleNewTab} className="create-tab-button">
-              ➕ Nueva pestaña
+        <div className="puppeteer-active-indicator">
+          <div className="puppeteer-indicator-content">
+            <div className="puppeteer-icon-large">🎭</div>
+            <h2>Navegador Embebido Activo</h2>
+            <p className="puppeteer-current-url">Navegando en: <strong>{puppeteerUrl}</strong></p>
+            <p className="puppeteer-description">
+              El contenido se está mostrando en la ventana embebida arriba.
+              <br />
+              Usa el panel de control para navegar a otras URLs.
+            </p>
+            <button 
+              className="puppeteer-close-btn-large"
+              onClick={closePuppeteerBrowser}
+            >
+              🔴 Cerrar Navegador
             </button>
           </div>
         </div>
       );
     }
 
-    // Renderizar TODAS las pestañas pero mostrar solo la activa
+    // Mensaje inicial
     return (
-      <div className="tabs-container">
-        {tabs.map(tab => {
-          const isActive = tab.id === activeTabId;
-          
-          // Para pestañas vacías, mostrar Speed Dial
-          if (!tab.url || tab.url === '') {
-            return (
-              <div 
-                key={tab.id}
-                className="tab-content"
-                style={{ 
-                  display: isActive ? 'block' : 'none',
-                  height: '100%',
-                  width: '100%'
-                }}
-              >
-                <SpeedDial 
-                  onNavigate={(url: string, title: string) => {
-                    console.log('🎯 SpeedDial navegando a:', url, 'con título:', title);
-                    handleNavigate(tab.id, url);
-                  }}
-                  onOpenBookmarks={() => setShowBookmarkManager(true)}
-                />
-              </div>
-            );
-          }
-
-          // Para pestañas con contenido
-          if (isElectron) {
-            console.log(`🖥️ Renderizando webview para pestaña ${tab.id} (activa: ${isActive})`);
-            return (
-              <div 
-                key={tab.id}
-                className="tab-content"
-                style={{ 
-                  display: isActive ? 'block' : 'none',
-                  height: '100%',
-                  width: '100%'
-                }}
-              >
-                <ElectronWebView
-                  key={tab.url.includes('youtube.com/watch') ? `youtube-${tab.id}` : `webview-${tab.id}-${tab.url}`}
-                  url={tab.url}
-                  setStatus={() => {}}
-                  onUrlChange={(url, title) => {
-                    // Solo actualizar si es la pestaña activa para evitar conflictos
-                    if (isActive) {
-                      handleUrlChange(url, title);
-                    }
-                  }}
-                  onNewTab={(url, title) => {
-                    console.log('🆕 Solicitud de nueva pestaña desde webview:', url);
-                    createNewTab(url, title || 'Nueva pestaña');
-                  }}
-                />
-              </div>
-            );
-          } else {
-            console.log(`🌐 Renderizando iframe para pestaña ${tab.id} (activa: ${isActive})`);
-            return (
-              <div 
-                key={tab.id}
-                className="tab-content"
-                style={{ 
-                  display: isActive ? 'block' : 'none',
-                  height: '100%',
-                  width: '100%'
-                }}
-              >
-                <div className="iframe-container">
-                  <iframe
-                    key={`iframe-${tab.id}`} // Clave única para cada iframe
-                    src={tab.url}
-                    className="iframe-content"
-                    title={tab.title}
-                    onLoad={() => {
-                      console.log('🎯 [IFRAME] onLoad disparado para pestaña:', tab.id);
-                      handleWebviewLoad(tab.id);
-                      // Solo sincronizar URL si es la pestaña activa Y hay un cambio real
-                      if (isActive) {
-                        const iframe = document.querySelector(`iframe[key="iframe-${tab.id}"]`) as HTMLIFrameElement;
-                        if (iframe?.src && iframe.src !== tab.url) {
-                          console.log('🔄 [IFRAME] URL sincronización detectada:', {
-                            iframeSrc: iframe.src,
-                            tabUrl: tab.url
-                          });
-                          // Solo actualizar si no es una URL problemática con parámetros dinámicos
-                          if (!iframe.src.includes('zx=') && !iframe.src.includes('no_sw_cr=')) {
-                            handleUrlChange(iframe.src, tab.title);
-                          } else {
-                            console.log('🚫 [IFRAME] Ignorando URL con parámetros dinámicos');
-                          }
-                        }
-                      }
-                    }}
-                    onError={() => {
-                      console.log('❌ [IFRAME] onError para pestaña:', tab.id);
-                      handleWebviewError(tab.id, 'Error de carga de iframe');
-                    }}
-                  />
-                  
-                  {isActive && (
-                    <div className="iframe-warning">
-                      ⚠️ Modo Web (iFrame): Algunos sitios pueden bloquear la carga en iframes.
-                      <br />
-                      💡 Para mejor compatibilidad, asegúrate de estar ejecutando con Electron.
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          }
-        })}
+      <div className="no-active-tab">
+        <div className="welcome-message">
+          <div className="chromium-icon">🎭</div>
+          <h2>Navegador Puppeteer Embebido</h2>
+          <p>Usa el panel de control superior para abrir páginas web</p>
+          <p className="puppeteer-hint">
+            Ingresa una URL en el campo superior y haz clic en "🚀 Abrir"
+          </p>
+        </div>
       </div>
     );
   };
 
   return (
     <div className="simple-koko-web">
-      <BrowserTopBar
-        tabs={tabs}
-        activeTabId={activeTabId}
-        activeTab={activeTab}
-        onTabSelect={switchTab}
-        onTabClose={closeTab}
-        onNewTab={handleNewTab}
-        onNavigate={handleNavigate}
-        onSearch={performIntegratedSearch}
-        onGoBack={handleGoBack}
-        onGoForward={handleGoForward}
-        onRefresh={handleRefresh}
-        onOpenBookmarks={() => setShowBookmarkManager(true)}
-        setStatus={() => {}} // función vacía ya que no mostramos status
-      />
+
+      {/* 🎭 Panel de Control de Puppeteer Browser */}
+      {isElectron && (
+        <div className="puppeteer-control-panel">
+          <div className="puppeteer-control-content">
+            <span className="puppeteer-label">🎭 Navegador Embebido:</span>
+            <input
+              type="text"
+              className="puppeteer-url-input"
+              placeholder="Ingresa URL (ej: youtube.com)"
+              value={puppeteerUrl}
+              onChange={(e) => setPuppeteerUrl(e.target.value)}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  openInPuppeteerBrowser(puppeteerUrl);
+                }
+              }}
+              disabled={isPuppeteerLoading}
+            />
+            <button
+              className="puppeteer-open-btn"
+              onClick={() => openInPuppeteerBrowser(puppeteerUrl)}
+              disabled={isPuppeteerLoading}
+            >
+              {isPuppeteerLoading ? '⏳ Cargando...' : '🚀 Abrir'}
+            </button>
+            {isPuppeteerOpen && (
+              <button
+                className="puppeteer-close-btn"
+                onClick={closePuppeteerBrowser}
+              >
+                🔴 Cerrar
+              </button>
+            )}
+            <span className="puppeteer-status">
+              {isPuppeteerOpen ? '🟢 Activo' : '⚪ Inactivo'}
+            </span>
+          </div>
+        </div>
+      )}
 
       <div className="web-content">
         {/* Overlay de modo búsqueda */}

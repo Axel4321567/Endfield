@@ -1,4 +1,4 @@
-import { ipcMain, BrowserView } from 'electron';
+import { ipcMain, BrowserView, session } from 'electron';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 import { readdirSync, existsSync } from 'fs';
@@ -62,9 +62,13 @@ function createOrUpdateBrowserView(url) {
     
     console.log('🔨 [BrowserView] Creando BrowserView...');
     
-    // Crear nuevo BrowserView con protecciones adicionales
+    // Obtener la sesión webview pre-configurada con anti-detección
+    const webviewSession = session.fromPartition('persist:webview', { cache: true });
+    
+    // Crear nuevo BrowserView usando la sesión webview con anti-detección
     currentBrowserView = new BrowserView({
       webPreferences: {
+        session: webviewSession, // Usar sesión con anti-detección configurada
         nodeIntegration: false,
         contextIsolation: true,
         sandbox: true,
@@ -76,39 +80,61 @@ function createOrUpdateBrowserView(url) {
   
   mainWindow.addBrowserView(currentBrowserView);
   
+  console.log('🛡️ [BrowserView] Usando sesión webview con anti-detección pre-configurada');
+  
   // Calcular dimensiones dinámicamente desde el DOM
   const updateBounds = () => {
+    if (!currentBrowserView || currentBrowserView.webContents.isDestroyed()) {
+      return;
+    }
+    
     mainWindow.webContents.executeJavaScript(`
       (() => {
-        const sidebar = document.querySelector('.sidebar, [class*="sidebar"], nav');
-        const header = document.querySelector('.puppeteer-control-panel, header');
-        return {
-          sidebarWidth: sidebar ? sidebar.offsetWidth : 80,
-          headerHeight: header ? header.offsetHeight + 60 : 120
-        };
+        const sidebar = document.querySelector('.sidebar-container');
+        const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+        
+        // Obtener ancho del sidebar (280px normal, 72px colapsado)
+        const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+        
+        // Obtener altura del header del navegador
+        const headerHeight = header ? header.offsetHeight : 60;
+        
+        console.log('📏 [BrowserView] Dimensiones detectadas:', {
+          sidebarWidth,
+          headerHeight,
+          sidebarCollapsed: sidebar?.classList.contains('collapsed')
+        });
+        
+        return { sidebarWidth, headerHeight };
       })()
     `).then(({ sidebarWidth, headerHeight }) => {
       const bounds = mainWindow.getContentBounds();
-      currentBrowserView.setBounds({
+      const newBounds = {
         x: sidebarWidth,
         y: headerHeight,
         width: bounds.width - sidebarWidth,
         height: bounds.height - headerHeight
-      });
-    }).catch(() => {
-      // Fallback si no se puede leer el DOM
+      };
+      
+      console.log('🔧 [BrowserView] Aplicando bounds:', newBounds);
+      currentBrowserView.setBounds(newBounds);
+    }).catch((error) => {
+      console.warn('⚠️ [BrowserView] Error obteniendo dimensiones, usando fallback:', error.message);
+      // Fallback con dimensiones por defecto
       const bounds = mainWindow.getContentBounds();
       currentBrowserView.setBounds({
-        x: 80,
-        y: 120,
-        width: bounds.width - 80,
-        height: bounds.height - 120
+        x: 280,
+        y: 60,
+        width: bounds.width - 280,
+        height: bounds.height - 60
       });
     });
   };
   
-  // Aplicar bounds iniciales
+  // Aplicar bounds iniciales con múltiples intentos para asegurar que el DOM esté listo
   setTimeout(updateBounds, 100);
+  setTimeout(updateBounds, 300);
+  setTimeout(updateBounds, 500);
   
   currentBrowserView.setAutoResize({
     width: true,
@@ -243,19 +269,54 @@ export function registerPuppeteerBrowserHandlers(window) {
     };
   });
   
+  // Handler para notificar cambios en el sidebar
+  ipcMain.handle('notify-sidebar-change', async () => {
+    console.log('🔔 [Sidebar] Cambio detectado, actualizando BrowserView...');
+    
+    if (!currentBrowserView || currentBrowserView.webContents.isDestroyed()) {
+      return { success: false, message: 'No hay BrowserView activo' };
+    }
+    
+    try {
+      const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
+        (() => {
+          const sidebar = document.querySelector('.sidebar-container');
+          const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+          const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+          const headerHeight = header ? header.offsetHeight : 60;
+          return { sidebarWidth, headerHeight };
+        })()
+      `);
+      
+      const bounds = mainWindow.getContentBounds();
+      currentBrowserView.setBounds({
+        x: sidebarWidth,
+        y: headerHeight,
+        width: bounds.width - sidebarWidth,
+        height: bounds.height - headerHeight
+      });
+      
+      console.log('✅ [Sidebar] BrowserView actualizado:', { sidebarWidth, headerHeight });
+      return { success: true };
+    } catch (error) {
+      console.error('❌ [Sidebar] Error actualizando BrowserView:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
   // Redimensionar BrowserView al redimensionar ventana
   if (mainWindow && !mainWindow.isDestroyed()) {
+    // Handler para resize de ventana
     mainWindow.on('resize', () => {
       try {
         if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.executeJavaScript(`
             (() => {
-              const sidebar = document.querySelector('.sidebar, [class*="sidebar"], nav');
-              const header = document.querySelector('.puppeteer-control-panel, header');
-              return {
-                sidebarWidth: sidebar ? sidebar.offsetWidth : 80,
-                headerHeight: header ? header.offsetHeight + 60 : 120
-              };
+              const sidebar = document.querySelector('.sidebar-container');
+              const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+              const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+              const headerHeight = header ? header.offsetHeight : 60;
+              return { sidebarWidth, headerHeight };
             })()
           `).then(({ sidebarWidth, headerHeight }) => {
             if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
@@ -271,10 +332,10 @@ export function registerPuppeteerBrowserHandlers(window) {
             if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
               const bounds = mainWindow.getContentBounds();
               currentBrowserView.setBounds({
-                x: 80,
-                y: 120,
-                width: bounds.width - 80,
-                height: bounds.height - 120
+                x: 280,
+                y: 60,
+                width: bounds.width - 280,
+                height: bounds.height - 60
               });
             }
           });
@@ -283,6 +344,32 @@ export function registerPuppeteerBrowserHandlers(window) {
         console.warn('⚠️ [BrowserView] Error en resize:', error.message);
       }
     });
+    
+    // Observer para detectar cambios en el sidebar (colapsar/expandir)
+    mainWindow.webContents.executeJavaScript(`
+      (() => {
+        const sidebar = document.querySelector('.sidebar-container');
+        if (!sidebar) return;
+        
+        // Observer para detectar cambios en las clases del sidebar
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              console.log('🔄 [Sidebar] Cambio detectado en el sidebar');
+              // Notificar a Electron que el sidebar cambió
+              window.electronAPI?.app?.notifySidebarChange?.();
+            }
+          });
+        });
+        
+        observer.observe(sidebar, {
+          attributes: true,
+          attributeFilter: ['class']
+        });
+        
+        console.log('👁️ [Sidebar] Observer configurado');
+      })()
+    `).catch(err => console.warn('⚠️ [BrowserView] No se pudo configurar observer:', err.message));
   }
   
   console.log('✅ [Puppeteer] Handlers registrados correctamente');

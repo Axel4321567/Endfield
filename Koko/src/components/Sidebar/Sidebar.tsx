@@ -1,6 +1,6 @@
 import './Sidebar.css';
 import { useLogger } from '../../contexts/LogsContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface SidebarProps {
   selectedOption: string | null;
@@ -71,7 +71,18 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
 export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle }: SidebarProps) => {
   const { terminalOpen, setTerminalOpen } = useLogger();
   const [extrasExpanded, setExtrasExpanded] = useState(false);
-  const [mysqlExpanded, setMysqlExpanded] = useState(false);
+  
+  // Notificar a Electron cuando cambie el estado del sidebar
+  useEffect(() => {
+    if (window.electronAPI?.app?.notifySidebarChange) {
+      // Esperar a que la animación CSS termine (300ms)
+      const timer = setTimeout(() => {
+        window.electronAPI.app.notifySidebarChange();
+      }, 350);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isCollapsed]);
   
   const handleOptionClick = (option: string) => {
     onSelectOption(option);
@@ -83,10 +94,6 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
 
   const toggleExtras = () => {
     setExtrasExpanded(!extrasExpanded);
-  };
-
-  const toggleMysql = () => {
-    setMysqlExpanded(!mysqlExpanded);
   };
 
   return (
@@ -160,41 +167,27 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
           {/* Submenú desplegable */}
           {extrasExpanded && !isCollapsed && (
             <div className="sidebar-submenu">
-              {/* MySQL con desplegable */}
+              {/* Base de datos directamente en Extras */}
               <button 
-                onClick={() => {
-                  handleOptionClick('extras-heidisql');
-                  if (!mysqlExpanded) {
-                    toggleMysql();
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  toggleMysql();
-                }}
-                className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-heidisql' || selectedOption === 'extras-database' ? 'active' : ''} ${mysqlExpanded ? 'expanded' : ''}`}
-                title="Click para ver phpMyAdmin | Click derecho para expandir"
+                onClick={() => handleOptionClick('extras-database')}
+                className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-database' ? 'active' : ''}`}
+                title="Gestión de Base de datos MariaDB"
               >
                 <span className="sidebar-button-content">
-                  <span className="sidebar-button-text">🐬 MySQL</span>
-                  <ChevronIcon isOpen={mysqlExpanded} />
+                  <span className="sidebar-button-text">�️ Base de datos</span>
                 </span>
               </button>
               
-              {/* Submenú de MySQL */}
-              {mysqlExpanded && (
-                <div className="sidebar-submenu sidebar-submenu-nested">
-                  <button 
-                    onClick={() => handleOptionClick('extras-database')}
-                    className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-database' ? 'active' : ''}`}
-                    title="Gestión de MariaDB"
-                  >
-                    <span className="sidebar-button-content">
-                      <span className="sidebar-button-text">🗄️ Base de datos</span>
-                    </span>
-                  </button>
-                </div>
-              )}
+              {/* MySQL/phpMyAdmin */}
+              <button 
+                onClick={() => handleOptionClick('extras-heidisql')}
+                className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-heidisql' ? 'active' : ''}`}
+                title="phpMyAdmin - Gestión visual de MySQL"
+              >
+                <span className="sidebar-button-content">
+                  <span className="sidebar-button-text">� MySQL</span>
+                </span>
+              </button>
             </div>
           )}
         </div>
