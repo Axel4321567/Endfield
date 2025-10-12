@@ -1,4 +1,4 @@
-export type SidebarOption = 'dashboard' | 'koko-web' | 'discord' | 'database' | null;
+export type SidebarOption = 'dashboard' | 'koko-web' | 'discord' | 'database' | 'extras' | 'extras-heidisql' | 'extras-database' | 'extras-utilities' | null;
 
 export interface SidebarItem {
   id: SidebarOption;
@@ -36,7 +36,7 @@ export interface TabsManager {
 // Tipos globales para Electron API (compartidos por toda la aplicación)
 declare global {
   interface Window {
-    electronAPI?: {
+    ElectronAPI?: {
       isElectron: boolean;
       webview: {
         navigate: (url: string) => Promise<void>;

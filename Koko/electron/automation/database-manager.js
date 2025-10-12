@@ -12,15 +12,16 @@ const __dirname = path.dirname(__filename);
 
 const execAsync = promisify(exec);
 
-// URLs de descarga para MariaDB
+// URLs de descarga para MariaDB (versión portable ZIP)
 const MARIADB_DOWNLOAD_URLS = {
-  windows: 'https://archive.mariadb.org/mariadb-10.11.10/winx64-packages/mariadb-10.11.10-winx64.msi',
-  fallback: 'https://downloads.mariadb.org/f/mariadb-10.6.19/winx64-packages/mariadb-10.6.19-winx64.msi'
+  windows: 'https://archive.mariadb.org/mariadb-10.11.10/winx64-packages/mariadb-10.11.10-winx64.zip',
+  fallback: 'https://downloads.mariadb.org/f/mariadb-10.6.19/winx64-packages/mariadb-10.6.19-winx64.zip'
 };
 
-const INSTALLER_FILENAME = 'mariadb-installer.msi';
+const INSTALLER_FILENAME = 'mariadb-portable.zip';
 const RESOURCES_PATH = path.join(__dirname, '..', '..', 'resources', 'mariadb');
 const INSTALLER_PATH = path.join(RESOURCES_PATH, INSTALLER_FILENAME);
+const INSTALL_DIR = path.join(RESOURCES_PATH, 'server');
 
 /**
  * Descargar un archivo desde una URL
@@ -165,11 +166,35 @@ async function ensureMariaDBInstaller(progressCallback = null) {
 }
 
 /**
+ * Extraer archivo ZIP usando PowerShell
+ */
+async function extractZip(zipPath, destinationPath) {
+  console.log(`📦 [DatabaseManager] Extrayendo ZIP: ${zipPath} -> ${destinationPath}`);
+  
+  // Crear directorio de destino si no existe
+  if (!fs.existsSync(destinationPath)) {
+    fs.mkdirSync(destinationPath, { recursive: true });
+  }
+  
+  // Usar PowerShell para extraer (más rápido y confiable que bibliotecas de Node)
+  const extractCmd = `powershell -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destinationPath}' -Force"`;
+  
+  try {
+    await execAsync(extractCmd);
+    console.log(`✅ [DatabaseManager] Extracción completada`);
+    return true;
+  } catch (error) {
+    console.error(`❌ [DatabaseManager] Error al extraer ZIP:`, error);
+    throw new Error(`No se pudo extraer MariaDB: ${error.message}`);
+  }
+}
+
+/**
  * Clase principal para manejar la base de datos MariaDB
  */
 class DatabaseManager {
   constructor() {
-    this.serviceName = 'KokoDB';
+    this.serviceName = 'MariaDB';
     this.isInstalling = false;
     this.progressCallback = null;
   }
@@ -199,13 +224,6 @@ class DatabaseManager {
   getMariaDBPath() {
     const appDataPath = path.join(os.homedir(), 'AppData', 'Local', 'KokoBrowser');
     return path.join(appDataPath, 'mariadb');
-  }
-
-  /**
-   * Obtiene la ruta del ejecutable de HeidiSQL
-   */
-  getHeidiSQLPath() {
-    return path.join(this.getResourcesPath(), 'heidisql', 'heidisql.exe');
   }
 
   /**
@@ -266,7 +284,7 @@ class DatabaseManager {
   }
 
   /**
-   * Instala MariaDB usando el instalador descargado
+   * Instala MariaDB portable (versión ZIP)
    */
   async install() {
     if (this.isInstalling) {
@@ -276,12 +294,11 @@ class DatabaseManager {
     this.isInstalling = true;
     
     try {
-      console.log('🔧 [DatabaseManager] Iniciando instalación de MariaDB...');
+      console.log('🔧 [DatabaseManager] Iniciando instalación de MariaDB portable...');
       
       // Ejecutar diagnósticos primero
       const diagnostics = await this.runDiagnostics();
       if (!diagnostics.success) {
-        // Solo admin es crítico, puerto puede estar en uso por MariaDB
         const criticalIssues = diagnostics.issues.filter(issue => 
           issue.type === 'admin'
         );
@@ -298,45 +315,153 @@ class DatabaseManager {
         return { success: true, message: 'MariaDB ya está instalado' };
       }
 
-      // Asegurar que tenemos el instalador (descarga automática si es necesario)
-      console.log('📦 [DatabaseManager] Verificando instalador de MariaDB...');
-      const installerPath = await ensureMariaDBInstaller(this.progressCallback);
+      // Descargar ZIP portable
+      console.log('📦 [DatabaseManager] Descargando MariaDB portable...');
+      const zipPath = await ensureMariaDBInstaller(this.progressCallback);
       
-      console.log(`🚀 [DatabaseManager] Ejecutando instalador: ${installerPath}`);
+      if (this.progressCallback) {
+        this.progressCallback({ progress: 50, phase: 'Extrayendo archivos...' });
+      }
       
-      // Configurar parámetros de instalación silenciosa
-      const installArgs = [
-        '/i',
-        `"${installerPath}"`,
-        '/quiet',
-        '/norestart',
-        'SERVICENAME=MariaDB',
-        'PORT=3306',
-        'PASSWORD=koko123',
-        'UTF8=1'
-      ];
+      // Extraer ZIP a resources/mariadb/server
+      console.log(`� [DatabaseManager] Extrayendo a: ${INSTALL_DIR}`);
+      await extractZip(zipPath, INSTALL_DIR);
       
-      const result = await this.executeInstaller('msiexec', installArgs);
+      if (this.progressCallback) {
+        this.progressCallback({ progress: 70, phase: 'Configurando MariaDB...' });
+      }
       
-      if (result.success) {
-        console.log('✅ [DatabaseManager] MariaDB instalado correctamente');
+      // Buscar la carpeta extraída (usualmente mariadb-10.x.x-winx64)
+      const extractedFolders = fs.readdirSync(INSTALL_DIR).filter(item => {
+        const fullPath = path.join(INSTALL_DIR, item);
+        return fs.statSync(fullPath).isDirectory() && item.startsWith('mariadb');
+      });
+      
+      if (extractedFolders.length === 0) {
+        throw new Error('No se encontró la carpeta de MariaDB extraída');
+      }
+      
+      const mariadbFolder = path.join(INSTALL_DIR, extractedFolders[0]);
+      console.log(`✅ [DatabaseManager] MariaDB extraído en: ${mariadbFolder}`);
+      
+      // Mover contenido de la subcarpeta al directorio principal
+      console.log(`🔄 [DatabaseManager] Moviendo archivos al directorio principal...`);
+      const files = fs.readdirSync(mariadbFolder);
+      let movedCount = 0;
+      let errorCount = 0;
+      
+      for (const file of files) {
+        const srcPath = path.join(mariadbFolder, file);
+        const destPath = path.join(INSTALL_DIR, file);
         
-        // Verificar que el servicio esté disponible
-        const serviceCheck = await this.checkServiceExists();
-        if (serviceCheck) {
-          return { 
-            success: true, 
-            message: 'MariaDB instalado y configurado correctamente' 
-          };
-        } else {
-          return { 
-            success: false, 
-            message: 'Instalación completada pero el servicio no está disponible' 
-          };
+        try {
+          // Si el destino ya existe, eliminarlo primero
+          if (fs.existsSync(destPath)) {
+            console.log(`🗑️ [DatabaseManager] Eliminando ${file} existente...`);
+            if (fs.statSync(destPath).isDirectory()) {
+              fs.rmSync(destPath, { recursive: true, force: true });
+            } else {
+              fs.unlinkSync(destPath);
+            }
+          }
+          
+          // Copiar archivo/carpeta
+          if (fs.statSync(srcPath).isDirectory()) {
+            fs.cpSync(srcPath, destPath, { recursive: true, force: true });
+          } else {
+            fs.copyFileSync(srcPath, destPath);
+          }
+          movedCount++;
+          console.log(`✅ [DatabaseManager] Movido: ${file}`);
+        } catch (error) {
+          errorCount++;
+          console.error(`❌ [DatabaseManager] Error moviendo ${file}:`, error.message);
+        }
+      }
+      
+      console.log(`📊 [DatabaseManager] Resumen: ${movedCount} archivos movidos, ${errorCount} errores`);
+      
+      // Eliminar carpeta original (intentar, no es crítico si falla)
+      try {
+        fs.rmSync(mariadbFolder, { recursive: true, force: true });
+        console.log(`✅ [DatabaseManager] Carpeta temporal eliminada`);
+      } catch (rmError) {
+        console.warn(`⚠️ [DatabaseManager] No se pudo eliminar carpeta temporal (no crítico):`, rmError.message);
+      }
+      
+      if (this.progressCallback) {
+        this.progressCallback({ progress: 80, phase: 'Instalando servicio...' });
+      }
+      
+      // Instalar como servicio de Windows
+      const mysqldPath = path.join(INSTALL_DIR, 'bin', 'mysqld.exe');
+      const dataDir = path.join(INSTALL_DIR, 'data');
+      
+      // Verificar que mysqld.exe existe
+      if (!fs.existsSync(mysqldPath)) {
+        throw new Error(`No se encontró mysqld.exe en: ${mysqldPath}`);
+      }
+      console.log(`✅ [DatabaseManager] mysqld.exe encontrado: ${mysqldPath}`);
+      
+      // Crear directorio data si no existe
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+        console.log(`📁 [DatabaseManager] Directorio data creado: ${dataDir}`);
+      }
+      
+      // Verificar si la base de datos ya está inicializada
+      const mysqlDir = path.join(dataDir, 'mysql');
+      const isInitialized = fs.existsSync(mysqlDir) && fs.readdirSync(mysqlDir).length > 0;
+      
+      if (!isInitialized) {
+        // Inicializar base de datos usando mysql_install_db.exe (herramienta correcta para Windows)
+        console.log('🔧 [DatabaseManager] Inicializando base de datos con mysql_install_db...');
+        const mysqlInstallDb = path.join(INSTALL_DIR, 'bin', 'mysql_install_db.exe');
+        
+        if (!fs.existsSync(mysqlInstallDb)) {
+          throw new Error(`No se encontró mysql_install_db.exe en: ${mysqlInstallDb}`);
+        }
+        
+        try {
+          const initCmd = `"${mysqlInstallDb}" --datadir="${dataDir}" --password=""`;
+          console.log(`📋 [DatabaseManager] Comando: ${initCmd}`);
+          const initResult = await execAsync(initCmd);
+          console.log(`✅ [DatabaseManager] Base de datos inicializada:`, initResult.stdout || initResult.stderr || 'OK');
+        } catch (initError) {
+          console.error(`❌ [DatabaseManager] Error al inicializar:`, initError.message);
+          throw new Error(`No se pudo inicializar la base de datos: ${initError.message}`);
         }
       } else {
-        throw new Error(result.error || 'Error en la instalación');
+        console.log(`✅ [DatabaseManager] Base de datos ya inicializada (directorio mysql/ existe y contiene archivos)`);
       }
+      
+      // Instalar servicio
+      console.log('🔧 [DatabaseManager] Instalando servicio MariaDB...');
+      try {
+        const installCmd = `"${mysqldPath}" --install MariaDB`;
+        console.log(`📋 [DatabaseManager] Comando: ${installCmd}`);
+        const installResult = await execAsync(installCmd);
+        console.log(`✅ [DatabaseManager] Servicio instalado:`, installResult.stdout || 'OK');
+      } catch (serviceError) {
+        console.error(`❌ [DatabaseManager] Error al instalar servicio:`, serviceError.message);
+        // Verificar si el servicio ya existe
+        try {
+          await execAsync('sc query MariaDB');
+          console.log(`⚠️ [DatabaseManager] El servicio MariaDB ya existe`);
+        } catch {
+          throw new Error(`No se pudo instalar el servicio: ${serviceError.message}`);
+        }
+      }
+      
+      if (this.progressCallback) {
+        this.progressCallback({ progress: 100, phase: 'Instalación completada' });
+      }
+      
+      console.log('✅ [DatabaseManager] MariaDB portable instalado correctamente');
+      return { 
+        success: true, 
+        message: 'MariaDB instalado correctamente' 
+      };
       
     } catch (error) {
       console.error('❌ [DatabaseManager] Error en instalación:', error);
@@ -350,13 +475,138 @@ class DatabaseManager {
   }
 
   /**
+   * Desinstala MariaDB del sistema
+   */
+  /**
+   * Desinstala MariaDB portable (elimina servicio y archivos)
+   */
+  async uninstall() {
+    try {
+      console.log('🗑️ [DatabaseManager] Iniciando desinstalación de MariaDB portable...');
+      
+      // Verificar si está instalado
+      const isInstalled = await this.isMariaDBInstalled();
+      if (!isInstalled) {
+        console.log('⚠️ [DatabaseManager] MariaDB no está instalado');
+        return { success: false, message: 'MariaDB no está instalado' };
+      }
+
+      // Paso 1: Detener el servicio si está ejecutándose
+      const status = await this.getMariaDBStatus();
+      if (status.isRunning) {
+        console.log('⏹️ [DatabaseManager] Deteniendo servicio MariaDB...');
+        try {
+          await execAsync('net stop MariaDB');
+          console.log('✅ [DatabaseManager] Servicio detenido');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (error) {
+          console.warn('⚠️ [DatabaseManager] Error al detener servicio:', error.message);
+        }
+      }
+
+      // Paso 2: Eliminar el servicio de Windows
+      console.log('�️ [DatabaseManager] Eliminando servicio de Windows...');
+      try {
+        // Primero intentar desinstalar con mysqld
+        const mysqldPath = path.join(INSTALL_DIR, 'bin', 'mysqld.exe');
+        if (fs.existsSync(mysqldPath)) {
+          await execAsync(`"${mysqldPath}" --remove MariaDB`);
+          console.log('✅ [DatabaseManager] Servicio desinstalado con mysqld');
+        }
+      } catch (error) {
+        console.warn('⚠️ [DatabaseManager] mysqld --remove falló, intentando sc delete...', error.message);
+        try {
+          await execAsync('sc delete MariaDB');
+          console.log('✅ [DatabaseManager] Servicio eliminado con sc delete');
+        } catch (scError) {
+          console.warn('⚠️ [DatabaseManager] sc delete falló:', scError.message);
+        }
+      }
+      
+      // Esperar a que el servicio se elimine completamente
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Paso 3: Eliminar archivos de instalación
+      const installDir = INSTALL_DIR;
+      if (fs.existsSync(installDir)) {
+        console.log(`🗑️ [DatabaseManager] Eliminando archivos de instalación: ${installDir}`);
+        try {
+          fs.rmSync(installDir, { recursive: true, force: true });
+          console.log('✅ [DatabaseManager] Archivos eliminados');
+        } catch (fsError) {
+          console.error(`❌ [DatabaseManager] Error al eliminar archivos:`, fsError.message);
+          throw new Error(`No se pudieron eliminar los archivos: ${fsError.message}`);
+        }
+      }
+      
+      // Paso 4: Eliminar el archivo ZIP descargado
+      const zipPath = INSTALLER_PATH;
+      if (fs.existsSync(zipPath)) {
+        console.log(`🗑️ [DatabaseManager] Eliminando instalador: ${zipPath}`);
+        try {
+          fs.unlinkSync(zipPath);
+          console.log('✅ [DatabaseManager] Instalador eliminado');
+        } catch (error) {
+          console.warn('⚠️ [DatabaseManager] No se pudo eliminar instalador:', error.message);
+        }
+      }
+      
+      // Verificar que se desinstaló
+      const stillInstalled = await this.isMariaDBInstalled();
+      if (stillInstalled) {
+        throw new Error('La desinstalación parece haber fallado');
+      }
+      
+      console.log('✅ [DatabaseManager] MariaDB desinstalado correctamente');
+      return { 
+        success: true, 
+        message: 'MariaDB desinstalado correctamente' 
+      };
+      
+    } catch (error) {
+      console.error('❌ [DatabaseManager] Error en desinstalación:', error);
+      return { 
+        success: false, 
+        message: error.message || 'Error desconocido durante la desinstalación'
+      };
+    }
+  }
+
+  /**
    * Verifica si MariaDB está instalado como servicio
    */
   async isMariaDBInstalled() {
     try {
-      const { stdout } = await execAsync('sc query MariaDB');
-      return stdout.includes('MariaDB');
+      // Verificar si existe el directorio de instalación local
+      const installDir = path.join(RESOURCES_PATH, 'server');
+      const mariadbBin = path.join(installDir, 'bin', 'mysqld.exe');
+      
+      // Verificar si existe el ejecutable en resources
+      const hasExecutable = fs.existsSync(mariadbBin);
+      
+      if (!hasExecutable) {
+        console.log(`⚠️ [DatabaseManager] mysqld.exe no encontrado en: ${mariadbBin}`);
+        return false;
+      }
+      
+      // Verificar si el servicio está instalado
+      try {
+        const { stdout } = await execAsync('sc query MariaDB');
+        const isServiceInstalled = stdout.includes('MariaDB');
+        
+        if (isServiceInstalled) {
+          console.log(`✅ [DatabaseManager] MariaDB completamente instalado (ejecutable + servicio)`);
+          return true;
+        } else {
+          console.log(`⚠️ [DatabaseManager] Ejecutable existe pero servicio no está instalado`);
+          return false;
+        }
+      } catch (serviceError) {
+        console.log(`⚠️ [DatabaseManager] Ejecutable existe pero servicio no está instalado`);
+        return false;
+      }
     } catch (error) {
+      console.error(`❌ [DatabaseManager] Error verificando instalación:`, error.message);
       return false;
     }
   }
@@ -515,43 +765,21 @@ class DatabaseManager {
   }
 
   /**
-   * Abre HeidiSQL con la configuración preconfigurada
-   */
-  async openHeidiSQL() {
-    try {
-      console.log('🖥️ [DatabaseManager] Abriendo HeidiSQL...');
-      
-      const heidiPath = this.getHeidiSQLPath();
-
-      if (!fs.existsSync(heidiPath)) {
-        throw new Error('HeidiSQL no encontrado');
-      }
-
-      // Abrir HeidiSQL
-      const heidiProcess = spawn(heidiPath, [], {
-        detached: true,
-        stdio: 'ignore'
-      });
-
-      heidiProcess.unref();
-
-      console.log('✅ [DatabaseManager] HeidiSQL abierto exitosamente');
-      return { success: true, message: 'HeidiSQL abierto exitosamente' };
-
-    } catch (error) {
-      console.error('❌ [DatabaseManager] Error abriendo HeidiSQL:', error);
-      return { success: false, message: error.message };
-    }
-  }
-
-  /**
    * Ejecuta un instalador con argumentos específicos
    */
   async executeInstaller(command, args) {
     return new Promise((resolve, reject) => {
-      console.log(`� [DatabaseManager] Ejecutando: ${command} ${args.join(' ')}`);
+      // Escapar argumentos con espacios
+      const escapedArgs = args.map(arg => {
+        if (arg.includes(' ') && !arg.startsWith('"')) {
+          return `"${arg}"`;
+        }
+        return arg;
+      });
       
-      const child = spawn(command, args, {
+      console.log(`🚀 [DatabaseManager] Ejecutando: ${command} ${escapedArgs.join(' ')}`);
+      
+      const child = spawn(command, escapedArgs, {
         stdio: 'pipe',
         shell: true
       });

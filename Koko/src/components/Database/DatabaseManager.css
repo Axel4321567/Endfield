@@ -1,19 +1,41 @@
-/* 🗄️ Estilos para DatabaseManager */
+/* ============================================================
+   🗄️ DATABASE MANAGER - Opera GX Theme Integration
+   Refactorizado para usar variables globales de variables.css
+   
+   Variables utilizadas desde variables.css:
+   - Colores: --color-bg, --color-surface, --color-text, etc.
+   - Estados: --color-success, --color-error, --color-warning, --color-info
+   - Acentos: --color-accent, --color-accent-light, --color-accent-glow
+   - Bordes: --radius-small, --radius-medium, --radius-large
+   - Sombras: --shadow-soft, --shadow-strong
+   - Transiciones: --transition
+   - Efectos: --blur-bg
+   
+   Fecha de refactorización: Octubre 2025
+   Autor: Axel
+   ============================================================ */
+
+/* ============================================================
+   🗄️ Main Container
+   ============================================================ */
 .database-manager {
-  padding: 1.5rem;
-  background: rgba(30, 35, 42, 0.95);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  padding: 16px;
+  background: linear-gradient(135deg, var(--color-surface) 0%, var(--color-bg-alt) 100%);
+  border-radius: var(--radius-large);
+  border: 1px solid var(--color-border);
+  backdrop-filter: var(--blur-bg);
+  box-shadow: var(--shadow-strong), 0 0 40px rgba(255, 27, 45, 0.1);
   max-width: 100%;
   width: 100%;
-  color: #e2e8f0;
+  color: var(--color-text);
   box-sizing: border-box;
   position: relative;
   height: auto;
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
   overflow-x: hidden;
+  transition: var(--transition);
+  animation: fadeIn 0.5s ease-in-out;
 }
 
 /* Asegurar que todos los elementos hijos respeten el contenedor */
@@ -23,64 +45,81 @@
 
 /* Personalizar scrollbar */
 .database-manager::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  background: var(--color-bg-alt);
 }
 
 .database-manager::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  background: var(--color-bg-alt);
+  border-radius: var(--radius-small);
 }
 
 .database-manager::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  background: linear-gradient(180deg, var(--color-accent) 0%, var(--color-accent-dark) 100%);
+  border-radius: var(--radius-small);
+  border: 1px solid var(--color-accent-dark);
+  box-shadow: 0 0 8px var(--color-accent-glow);
+  transition: var(--transition);
 }
 
 .database-manager::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: linear-gradient(180deg, var(--color-accent-light) 0%, var(--color-accent) 100%);
+  box-shadow: 0 0 12px var(--color-accent-glow);
 }
 
-/* Header */
+/* ============================================================
+   📋 Header Section
+   ============================================================ */
 .database-manager__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .database-manager__title {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.1rem;
+  font-weight: 700;
   margin: 0;
-  color: #fff;
+  background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  filter: drop-shadow(0 0 12px var(--color-accent-glow));
+  letter-spacing: 0.3px;
 }
 
 .database-manager__controls {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 8px;
 }
 
 .database-manager__refresh-btn {
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
-  padding: 0.5rem;
-  border-radius: 6px;
+  background: linear-gradient(135deg, var(--color-surface-alt), var(--color-surface));
+  border: 1px solid var(--color-info);
+  color: var(--color-info);
+  padding: 6px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+  text-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
 }
 
 .database-manager__refresh-btn:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, var(--color-info), #2563eb);
+  color: white;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 4px 12px rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
 }
 
 .database-manager__refresh-btn:disabled {
@@ -89,19 +128,25 @@
 }
 
 .database-manager__diagnostics-btn {
-  background: rgba(168, 85, 247, 0.1);
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  background: linear-gradient(135deg, var(--color-surface-alt), var(--color-surface));
+  border: 1px solid #a855f7;
   color: #c084fc;
-  padding: 0.5rem;
-  border-radius: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.2);
+  text-shadow: 0 0 5px rgba(168, 85, 247, 0.3);
 }
 
 .database-manager__diagnostics-btn:hover:not(:disabled) {
-  background: rgba(168, 85, 247, 0.2);
-  border-color: rgba(168, 85, 247, 0.5);
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: white;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5), 0 4px 12px rgba(168, 85, 247, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
 }
 
 .database-manager__diagnostics-btn:disabled {
@@ -110,174 +155,261 @@
 }
 
 .database-manager__terminal-btn {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
-  padding: 0.5rem;
-  border-radius: 6px;
+  background: linear-gradient(135deg, var(--color-surface-alt), var(--color-surface));
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
+  padding: 6px 12px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1.1rem;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(52, 211, 153, 0.2);
+  text-shadow: 0 0 5px rgba(52, 211, 153, 0.3);
 }
 
 .database-manager__terminal-btn:hover {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.5);
+  background: linear-gradient(135deg, var(--color-success), #059669);
+  color: white;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.5), 0 4px 12px rgba(52, 211, 153, 0.3);
+  transform: translateY(-2px) scale(1.05);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
 }
 
 .database-manager__terminal-btn--active {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: rgba(34, 197, 94, 0.5);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+  background: linear-gradient(135deg, var(--color-success), #059669);
+  color: white;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.5), 0 4px 12px rgba(52, 211, 153, 0.3);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+  animation: terminalActive 2s ease-in-out infinite;
+}
+
+@keyframes terminalActive {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.5), 0 4px 12px rgba(52, 211, 153, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(52, 211, 153, 0.7), 0 4px 12px rgba(52, 211, 153, 0.5);
+  }
 }
 
 .database-manager__auto-refresh {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #cbd5e1;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--color-text-dim);
   cursor: pointer;
+  transition: var(--transition);
+}
+
+.database-manager__auto-refresh:hover {
+  color: var(--color-text);
 }
 
 .database-manager__auto-refresh input[type="checkbox"] {
-  accent-color: #3b82f6;
+  accent-color: var(--color-accent);
+  cursor: pointer;
 }
 
-/* Error message */
+/* ============================================================
+   ❌ Error Messages
+   ============================================================ */
 .database-manager__error {
   background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #fca5a5;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  padding: 12px;
+  border-radius: 12px;
+  margin-bottom: 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: var(--shadow-soft);
+  animation: fadeIn 0.4s ease-in-out;
 }
 
 .database-manager__error button {
   background: none;
   border: none;
-  color: #fca5a5;
+  color: var(--color-error);
   cursor: pointer;
   font-size: 1.2rem;
   padding: 0;
-  margin-left: 1rem;
+  margin-left: 16px;
+  transition: var(--transition);
 }
 
-/* Diagnostics section */
+.database-manager__error button:hover {
+  color: var(--color-text);
+  transform: scale(1.1);
+}
+
+/* ============================================================
+   🔍 Diagnostics Section
+   ============================================================ */
 .database-manager__diagnostics {
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(168, 85, 247, 0.2);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, rgba(26, 31, 40, 0.6) 0%, rgba(36, 41, 50, 0.5) 100%);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  animation: fadeIn 0.4s ease-in-out;
 }
 
 .database-manager__diagnostics-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .database-manager__diagnostics-header h3 {
   margin: 0;
   color: #c084fc;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .database-manager__close-btn {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--color-text-muted);
   cursor: pointer;
   font-size: 1.2rem;
   padding: 0;
+  transition: var(--transition);
 }
 
 .database-manager__close-btn:hover {
-  color: #f1f5f9;
+  color: var(--color-text);
+  transform: scale(1.1);
 }
 
 .database-manager__diagnostics-success {
   background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #6ee7b7;
-  padding: 1rem;
-  border-radius: 6px;
+  border: 1px solid var(--color-success);
+  color: var(--color-success);
+  padding: 12px;
+  border-radius: var(--radius-medium);
   text-align: center;
+  font-weight: 500;
 }
 
 .database-manager__diagnostics-issues {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .database-manager__diagnostic-issue {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 6px;
-  padding: 1rem;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.database-manager__diagnostic-issue:hover {
+  transform: translateX(5px);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__diagnostic-issue--admin {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__diagnostic-issue--port {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.1));
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__diagnostic-issue--service {
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__diagnostic-issue--disk {
-  border-color: rgba(168, 85, 247, 0.4);
-  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.5);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.1));
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__diagnostic-issue--general {
-  border-color: rgba(107, 114, 128, 0.4);
-  background: rgba(107, 114, 128, 0.1);
+  border-color: rgba(107, 114, 128, 0.5);
+  background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(107, 114, 128, 0.1));
+  box-shadow: 0 0 12px rgba(107, 114, 128, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__issue-type {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
   color: #fff;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 0.9rem;
 }
 
 .database-manager__issue-solution {
-  color: #cbd5e1;
-  font-size: 0.9rem;
-  margin-left: 1.5rem;
+  color: #e2e8f0;
+  font-size: 0.85rem;
+  margin-left: 20px;
+  line-height: 1.5;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* Status section */
+/* ============================================================
+   🟢 Status Section
+   ============================================================ */
 .database-manager__status {
-  background: rgba(15, 23, 42, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, rgba(26, 31, 40, 0.6) 0%, rgba(36, 41, 50, 0.5) 100%);
+  border: 1px solid rgba(255, 27, 45, 0.15);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.database-manager__status::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 27, 45, 0.2), transparent);
+  border-radius: 20px 20px 0 0;
+}
+
+@keyframes statusScan {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .database-manager__status-indicator {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  gap: 12px;
+  margin-bottom: 0;
 }
 
 .database-manager__status-dot {
@@ -285,226 +417,381 @@
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
+  animation: statusPulse 2s ease-in-out infinite;
+  position: relative;
+}
+
+.database-manager__status-dot::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border-radius: 50%;
+  animation: statusRipple 2s ease-out infinite;
+  opacity: 0;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes statusRipple {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 .database-manager__status-dot--green {
-  background: #10b981;
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+  background: var(--color-success);
+  box-shadow: 0 0 8px var(--color-success);
 }
 
 .database-manager__status-dot--orange {
-  background: #f59e0b;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+  background: var(--color-warning);
+  box-shadow: 0 0 8px var(--color-warning);
 }
 
 .database-manager__status-dot--blue {
-  background: #3b82f6;
-  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  background: var(--color-info);
+  box-shadow: 0 0 8px var(--color-info);
 }
 
 .database-manager__status-dot--red {
-  background: #ef4444;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+  background: var(--color-error);
+  box-shadow: 0 0 8px var(--color-error);
 }
 
 .database-manager__status-dot--gray {
-  background: #6b7280;
-  box-shadow: 0 0 8px rgba(107, 114, 128, 0.4);
+  background: var(--color-text-muted);
+  box-shadow: 0 0 8px var(--color-text-muted);
 }
 
 .database-manager__status-text {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.3px;
 }
 
 .database-manager__version {
-  font-size: 0.9rem;
-  color: #94a3b8;
-  margin-left: 1.75rem;
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  margin-left: 12px;
+  font-family: 'Courier New', monospace;
 }
 
-/* Info section */
+/* ============================================================
+   ℹ️ Info Section
+   ============================================================ */
 .database-manager__info {
-  background: rgba(15, 23, 42, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  background: rgba(18, 22, 28, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+}
+
+.database-manager__info::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 27, 45, 0.15), transparent);
+  opacity: 0.5;
+}
+
+.database-manager__info::after {
+  content: none;
 }
 
 .database-manager__info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 14px;
 }
 
 .database-manager__info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 6px;
+  padding: 10px 12px;
+  background: rgba(20, 25, 32, 0.3);
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+  min-width: 0;
+}
+
+.database-manager__info-item:hover {
+  background: rgba(26, 31, 40, 0.5);
+  border-color: rgba(255, 27, 45, 0.15);
+  transform: translateX(3px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.database-manager__info-item:hover .database-manager__info-value {
+  box-shadow: 0 0 10px rgba(255, 27, 45, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .database-manager__info-label {
-  font-weight: 500;
-  color: #cbd5e1;
+  font-weight: 600;
+  color: var(--color-text);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .database-manager__info-value {
-  font-weight: 600;
-  color: #fff;
-  font-family: 'Fira Code', monospace;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 27, 45, 0.08);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 27, 45, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
 }
 
-/* Actions section */
+/* ============================================================
+   🔘 Actions Section
+   ============================================================ */
 .database-manager__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .database-manager__btn {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: white;
-  border: 1px solid rgba(79, 70, 229, 0.3);
-  padding: 0.875rem 1.5rem;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(26, 31, 40, 0.4) 0%, rgba(36, 41, 50, 0.3) 100%);
+  color: var(--color-text);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.95rem;
-  min-width: 140px;
+  gap: 6px;
+  font-size: 0.8rem;
+  min-width: 100px;
   justify-content: center;
   box-sizing: border-box;
-  width: 100%;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.database-manager__btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.database-manager__btn:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.database-manager__btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: var(--shadow-strong), 0 0 20px rgba(255, 27, 45, 0.3);
+  border-color: var(--color-accent);
 }
 
 .database-manager__btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .database-manager__btn--install {
-  background: linear-gradient(135deg, #059669, #10b981);
+  background: linear-gradient(135deg, #059669 0%, var(--color-success) 50%, #34d399 100%);
   color: white;
-  border: 1px solid rgba(16, 185, 129, 0.3);
+  border: 1px solid var(--color-success);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .database-manager__btn--install:hover:not(:disabled) {
-  background: linear-gradient(135deg, #047857, #059669);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: linear-gradient(135deg, #047857 0%, #059669 50%, var(--color-success) 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 25px rgba(16, 185, 129, 0.5), 0 0 30px var(--color-success), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .database-manager__btn--start {
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  color: white;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(59, 130, 246, 0.2) 100%);
+  color: var(--color-info);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__btn--start:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #3b82f6);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.5) 0%, rgba(59, 130, 246, 0.3) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  border-color: var(--color-info);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .database-manager__btn--stop {
-  background: linear-gradient(135deg, #dc2626, #ef4444);
-  color: white;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.3) 0%, rgba(239, 68, 68, 0.2) 100%);
+  color: var(--color-error);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__btn--stop:hover:not(:disabled) {
-  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  background: linear-gradient(135deg, rgba(185, 28, 28, 0.5) 0%, rgba(239, 68, 68, 0.3) 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  border-color: var(--color-error);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .database-manager__btn--heidisql {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #c084fc 100%);
   color: white;
-  border: 1px solid rgba(168, 85, 247, 0.3);
+  border: 1px solid #a855f7;
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .database-manager__btn--heidisql:hover:not(:disabled) {
-  background: linear-gradient(135deg, #6d28d9, #7c3aed);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.3);
+  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #a855f7 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 25px rgba(168, 85, 247, 0.5), 0 0 30px #a855f7, inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* Help section */
+.database-manager__btn--uninstall {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.3) 0%, rgba(245, 158, 11, 0.2) 100%);
+  color: var(--color-warning);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.database-manager__btn--uninstall:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(234, 88, 12, 0.5) 0%, rgba(245, 158, 11, 0.3) 100%);
+  transform: translateY(-1px);
+  border-color: var(--color-warning);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ============================================================
+   ❓ Help Section
+   ============================================================ */
 .database-manager__help {
-  background: rgba(15, 23, 42, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  margin: 1rem 0 0 0;
+  background: linear-gradient(135deg, var(--color-surface-alt) 0%, rgba(20, 25, 32, 0.9) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  margin: 12px 0 0 0;
   box-sizing: border-box;
   overflow: hidden;
+  box-shadow: var(--shadow-soft), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.database-manager__help:hover {
+  box-shadow: var(--shadow-strong), 0 0 20px rgba(255, 27, 45, 0.1);
+  border-color: var(--color-accent);
 }
 
 .database-manager__help-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 12px 16px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: var(--transition);
+  border-radius: var(--radius-large);
 }
 
 .database-manager__help-header:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg);
 }
 
 .database-manager__help h3 {
   margin: 0;
-  color: #fff;
-  font-size: 1rem;
+  color: var(--color-text);
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  font-weight: 600;
 }
 
 .database-manager__help-toggle {
   background: none;
   border: none;
-  color: #94a3b8;
-  font-size: 1.2rem;
+  color: var(--color-text-muted);
+  font-size: 1rem;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: var(--transition);
   padding: 0;
 }
 
 .database-manager__help-toggle:hover {
-  color: #fff;
+  color: var(--color-accent);
+  transform: scale(1.1);
 }
 
 .database-manager__help-content {
   margin: 0;
-  padding: 0 1.5rem 1.5rem 1.5rem;
+  padding: 0 16px 16px 16px;
   list-style-type: none;
-  animation: slideDown 0.3s ease-out;
+  animation: fadeIn 0.4s ease-in-out;
 }
 
 .database-manager__help-content li {
-  margin-bottom: 0.75rem;
-  color: #cbd5e1;
+  margin-bottom: 10px;
+  color: var(--color-text-dim);
   position: relative;
-  padding-left: 1.25rem;
+  padding-left: 20px;
+  font-size: 0.85rem;
+  line-height: 1.6;
 }
 
 .database-manager__help-content li::before {
   content: '▶';
   position: absolute;
   left: 0;
-  color: #3b82f6;
+  color: var(--color-accent);
   font-size: 0.8rem;
 }
 
@@ -513,7 +800,7 @@
 }
 
 .database-manager__help strong {
-  color: #fff;
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -529,21 +816,24 @@
   }
 }
 
-/* Responsive design */
+/* ============================================================
+   📱 Responsive Design
+   ============================================================ */
 @media (max-width: 768px) {
   .database-manager {
-    padding: 1rem;
+    padding: 12px;
   }
   
   .database-manager__header {
     flex-direction: column;
-    gap: 1rem;
+    gap: 12px;
     align-items: flex-start;
   }
   
   .database-manager__controls {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
   
   .database-manager__info-grid {
@@ -557,30 +847,46 @@
   .database-manager__btn {
     width: 100%;
   }
+  
+  .database-manager__debug-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
-/* Loading animation */
+/* ============================================================
+   ⚙️ Animations
+   ============================================================ */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 10px var(--color-accent-glow); }
+  50% { box-shadow: 0 0 20px var(--color-accent-light); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .database-manager__refresh-btn:disabled {
   animation: spin 1s linear infinite;
 }
 
-/* Smooth transitions */
-.database-manager * {
-  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-}
-
 /* 📊 Barra de progreso de descarga */
 .database-manager__progress {
-  margin: 1.5rem 0;
-  padding: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.6rem;
   background: rgba(59, 130, 246, 0.05);
   border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 8px;
+  border-radius: 6px;
   animation: slideIn 0.3s ease-out;
 }
 
@@ -588,17 +894,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .database-manager__progress-text {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #60a5fa;
   font-weight: 500;
 }
 
 .database-manager__progress-percent {
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: #34d399;
   font-weight: 600;
   font-family: 'Courier New', monospace;
@@ -606,9 +912,9 @@
 
 .database-manager__progress-bar {
   width: 100%;
-  height: 8px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
 }
@@ -657,258 +963,445 @@
   }
 }
 
-/* 🔍 Panel de Debug mejorado */
+/* ============================================================
+   🔍 Debug Panel
+   ============================================================ */
 .database-manager__debug {
-  background: rgba(20, 25, 32, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  backdrop-filter: blur(5px);
+  background: linear-gradient(135deg, rgba(26, 31, 40, 0.6) 0%, rgba(36, 41, 50, 0.5) 100%);
+  border: 1px solid rgba(255, 27, 45, 0.15);
+  border-radius: 20px;
+  padding: 20px;
+  margin: 16px 0;
+  backdrop-filter: blur(10px);
   box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+}
+
+.database-manager__debug::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 27, 45, 0.2), transparent);
+  border-radius: 20px 20px 0 0;
+}
+
+.database-manager__debug::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: radial-gradient(circle at top right, rgba(255, 27, 45, 0.03), transparent);
+  pointer-events: none;
 }
 
 .database-manager__debug-header {
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: var(--transition);
+  cursor: pointer;
+  border-radius: 12px;
+}
+
+.database-manager__debug-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: rgba(255, 27, 45, 0.2);
 }
 
 .database-manager__debug-header h3 {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #94a3b8;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 8px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
 }
 
 .database-manager__debug-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .database-manager__debug-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  padding: 10px 14px;
+  background: rgba(15, 20, 25, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: debugItemFade 0.4s ease-out backwards;
+  animation-delay: calc(var(--item-index, 0) * 0.05s);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  min-width: 0;
 }
 
 .database-manager__debug-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(24, 29, 36, 0.6);
+  border-color: rgba(255, 27, 45, 0.2);
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+@keyframes debugItemFade {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .database-manager__debug-label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text);
   font-family: 'Segoe UI', system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
 }
 
 .database-manager__debug-value {
-  font-size: 0.875rem;
-  font-weight: 600;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+  flex-shrink: 0;
 }
 
 .database-manager__debug-value--success {
   color: #34d399;
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(16, 185, 129, 0.15));
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 5px rgba(52, 211, 153, 0.5);
 }
 
 .database-manager__debug-value--error {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.2), rgba(239, 68, 68, 0.15));
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 5px rgba(248, 113, 113, 0.5);
 }
 
 .database-manager__debug-value--warning {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  color: #fde047;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.2));
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
 }
 
 .database-manager__debug-value--neutral {
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.1);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.15), rgba(100, 116, 139, 0.1));
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .database-manager__debug-value--running {
   color: #34d399;
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.25), rgba(16, 185, 129, 0.2));
+  border: 1px solid rgba(52, 211, 153, 0.5);
+  box-shadow: 0 0 15px rgba(52, 211, 153, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.6);
+  animation: runningPulse 2s ease-in-out infinite;
+}
+
+@keyframes runningPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(52, 211, 153, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(52, 211, 153, 0.6), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .database-manager__debug-value--stopped {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: #ff6b6b;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.25), rgba(239, 68, 68, 0.2));
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.4), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 8px rgba(248, 113, 113, 0.6);
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 1px;
 }
 
 .database-manager__debug-value--orange {
-  color: #fb923c;
-  background: rgba(251, 146, 60, 0.1);
-  border: 1px solid rgba(251, 146, 60, 0.2);
+  color: #fbbf24;
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.25), rgba(245, 158, 11, 0.2));
+  border: 1px solid rgba(251, 146, 60, 0.4);
+  box-shadow: 0 0 12px rgba(251, 146, 60, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(251, 146, 60, 0.5);
 }
 
 .database-manager__debug-value--green {
   color: #34d399;
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.25), rgba(16, 185, 129, 0.2));
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
 }
 
 .database-manager__debug-value--red {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.25), rgba(239, 68, 68, 0.2));
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  box-shadow: 0 0 12px rgba(248, 113, 113, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(248, 113, 113, 0.5);
 }
 
 .database-manager__debug-value--blue {
-  color: #60a5fa;
-  background: rgba(96, 165, 250, 0.1);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.25), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(96, 165, 250, 0.4);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(96, 165, 250, 0.5);
 }
 
 .database-manager__debug-value--gray {
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.1);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.2), rgba(100, 116, 139, 0.15));
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .database-manager__debug-value--installing {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  color: #fde047;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.2));
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 0 6px rgba(251, 191, 36, 0.5);
+  animation: installingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes installingPulse {
+  0%, 100% {
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(251, 191, 36, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
 }
 
 .database-manager__debug-value--unknown {
-  color: #64748b;
-  background: rgba(100, 116, 139, 0.1);
-  border: 1px solid rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+  background: linear-gradient(135deg, rgba(100, 116, 139, 0.2), rgba(71, 85, 105, 0.15));
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  box-shadow: 0 0 6px rgba(100, 116, 139, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
-/* 📊 Tarjeta de Estado MariaDB mejorada */
+/* ============================================================
+   📊 Status Card
+   ============================================================ */
 .database-manager__status-card {
-  background: rgba(20, 25, 32, 0.8);
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin: 1rem 0;
-  backdrop-filter: blur(5px);
-  transition: all 0.3s ease;
+  background: linear-gradient(135deg, rgba(26, 31, 40, 0.6) 0%, rgba(36, 41, 50, 0.5) 100%);
+  border: 1px solid rgba(255, 27, 45, 0.15);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   box-sizing: border-box;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.database-manager__status-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 27, 45, 0.2), transparent);
+  border-radius: 20px 20px 0 0;
+}
+
+.database-manager__status-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: radial-gradient(circle at top right, rgba(255, 27, 45, 0.03), transparent);
+  pointer-events: none;
 }
 
 .database-manager__status-card--detected {
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid var(--color-success);
   background: linear-gradient(135deg, rgba(52, 211, 153, 0.05), rgba(52, 211, 153, 0.02));
 }
 
 .database-manager__status-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(52, 211, 153, 0.1);
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .database-manager__status-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(52, 211, 153, 0.2);
+  gap: 16px;
+  flex-wrap: nowrap;
+}
+
+.database-manager__status-card-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
 }
 
 .database-manager__status-card-title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #34d399;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-success);
+  white-space: nowrap;
+  text-shadow: 0 0 10px rgba(52, 211, 153, 0.5);
+  letter-spacing: 0.5px;
 }
 
 .database-manager__status-badge {
-  padding: 0.375rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 600;
   border: 1px solid;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
 }
 
 .database-manager__status-badge--running {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.3);
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1));
+  color: var(--color-success);
+  border-color: var(--color-success);
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3), 0 0 15px rgba(34, 197, 94, 0.2);
+  animation: badgePulse 2s ease-in-out infinite;
 }
 
 .database-manager__status-badge--stopped {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
-  border-color: rgba(248, 113, 113, 0.3);
+  background: linear-gradient(135deg, rgba(248, 113, 113, 0.2), rgba(239, 68, 68, 0.1));
+  color: var(--color-error);
+  border-color: var(--color-error);
+  box-shadow: 0 2px 8px rgba(248, 113, 113, 0.3);
+}
+
+@keyframes badgePulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3), 0 0 15px rgba(34, 197, 94, 0.2);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.5), 0 0 20px rgba(34, 197, 94, 0.4);
+  }
 }
 
 .database-manager__status-card-content {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .database-manager__status-card-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 0;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .database-manager__status-card-label {
-  font-size: 0.9rem;
+  font-size: 0.7rem;
   font-weight: 500;
-  color: #94a3b8;
+  color: var(--color-text-dim);
+  white-space: nowrap;
 }
 
 .database-manager__status-card-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #e2e8f0;
-  font-family: 'JetBrains Mono', 'Courier New', monospace;
-  background: rgba(255, 255, 255, 0.05);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Courier New', monospace;
+  background: rgba(255, 27, 45, 0.08);
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 27, 45, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2), inset 0 1px 2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Contenedor de acciones */
-.database-manager__actions {
-  margin: 1rem 0 0 0;
+.database-manager__status-card-actions {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  box-sizing: border-box;
+  gap: 10px;
+  align-items: center;
 }
 
-/* Panel de control unificado */
+/* ============================================================
+   🎮 Control Panel
+   ============================================================ */
 .database-manager__control-panel {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  background: rgba(15, 23, 42, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1.5rem;
+  gap: 16px;
+  background: linear-gradient(135deg, var(--color-surface-alt) 0%, rgba(22, 27, 34, 0.95) 100%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  padding: 18px;
   box-sizing: border-box;
+  box-shadow: var(--shadow-strong), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.database-manager__control-panel::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 27, 45, 0.08), transparent);
+  pointer-events: none;
 }
 
 .database-manager__status-section {
@@ -916,32 +1409,61 @@
 }
 
 .database-manager__controls-section {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
 }
 
 .database-manager__controls-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
   align-items: center;
 }
 
-/* Sección de instalación */
+/* ============================================================
+   📥 Install Section
+   ============================================================ */
 .database-manager__install-section {
   display: flex;
   justify-content: center;
-  padding: 2rem;
-  background: rgba(15, 23, 42, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, var(--color-surface-alt) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--radius-large);
   box-sizing: border-box;
+  box-shadow: var(--shadow-soft), 0 0 20px rgba(16, 185, 129, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.database-manager__install-section::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.1), transparent 70%);
+  transform: translate(-50%, -50%);
+  animation: installGlow 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes installGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
 }
 
 .database-manager__install-section .database-manager__btn {
-  min-width: 250px;
-  padding: 1rem 2rem;
-  font-size: 1rem;
+  min-width: 200px;
+  padding: 10px 18px;
+  font-size: 0.85rem;
 }
 
 /* Grid para botones múltiples */
@@ -951,6 +1473,6 @@
 
 .database-manager__actions:has(.database-manager__btn + .database-manager__btn) {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
 }

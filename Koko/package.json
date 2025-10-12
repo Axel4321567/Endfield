@@ -5,7 +5,10 @@
   "main": "electron/main.js",
   "type": "module",
   "dependencies": {
+    "adm-zip": "^0.5.16",
     "electron-updater": "^6.6.2",
+    "lucide-react": "^0.545.0",
+    "mysql2": "^3.15.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

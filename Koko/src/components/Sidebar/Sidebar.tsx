@@ -1,5 +1,6 @@
 import './Sidebar.css';
 import { useLogger } from '../../contexts/LogsContext';
+import { useState } from 'react';
 
 interface SidebarProps {
   selectedOption: string | null;
@@ -27,9 +28,9 @@ const DiscordIcon = () => (
   </svg>
 );
 
-const DatabaseIcon = () => (
+const PasswordIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 3C7.58 3 4 4.79 4 7s3.58 4 8 4 8-1.79 8-4-3.58-4-8-4zM4 9v3c0 2.21 3.58 4 8 4s8-1.79 8-4V9c0 2.21-3.58 4-8 4s-8-1.79-8-4zM4 16v3c0 2.21 3.58 4 8 4s8-1.79 8-4v-3c0 2.21-3.58 4-8 4s-8-1.79-8-4z"/>
+    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
   </svg>
 );
 
@@ -39,14 +40,38 @@ const MenuIcon = () => (
   </svg>
 );
 
+const ServicesIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+    <path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/>
+  </svg>
+);
+
 const TerminalIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <path d="M2 3h20c1.1 0 2 .9 2 2v14c0 1.1-.9 2-2 2H2c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2zm0 4v10h20V7H2zm2 8l4-4-4-4v8zm6 0h8v-2h-8v2z"/>
   </svg>
 );
 
+const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
+  <svg 
+    width="14" 
+    height="14" 
+    viewBox="0 0 24 24" 
+    fill="currentColor"
+    style={{ 
+      transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+      transition: 'transform 0.2s ease'
+    }}
+  >
+    <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+  </svg>
+);
+
 export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle }: SidebarProps) => {
   const { terminalOpen, setTerminalOpen } = useLogger();
+  const [extrasExpanded, setExtrasExpanded] = useState(false);
+  const [mysqlExpanded, setMysqlExpanded] = useState(false);
   
   const handleOptionClick = (option: string) => {
     onSelectOption(option);
@@ -54,6 +79,14 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
 
   const handleTerminalToggle = () => {
     setTerminalOpen(!terminalOpen);
+  };
+
+  const toggleExtras = () => {
+    setExtrasExpanded(!extrasExpanded);
+  };
+
+  const toggleMysql = () => {
+    setMysqlExpanded(!mysqlExpanded);
   };
 
   return (
@@ -96,15 +129,75 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
           </span>
         </button>
         <button 
-          onClick={() => handleOptionClick('database')}
-          className={`sidebar-button ${selectedOption === 'database' ? 'active' : ''}`}
-          title={isCollapsed ? 'Base de Datos' : ''}
+          onClick={() => handleOptionClick('password-manager')}
+          className={`sidebar-button ${selectedOption === 'password-manager' ? 'active' : ''}`}
+          title={isCollapsed ? 'Gestor de Contraseñas' : ''}
         >
           <span className="sidebar-button-content">
-            <DatabaseIcon />
-            {!isCollapsed && <span className="sidebar-button-text">Base de Datos</span>}
+            <PasswordIcon />
+            {!isCollapsed && <span className="sidebar-button-text">Contraseñas</span>}
           </span>
         </button>
+        
+        {/* Extras - Botón desplegable */}
+        <div className="sidebar-dropdown">
+          <button 
+            onClick={toggleExtras}
+            className={`sidebar-button ${extrasExpanded ? 'expanded' : ''}`}
+            title={isCollapsed ? 'Extras' : ''}
+          >
+            <span className="sidebar-button-content">
+              <ServicesIcon />
+              {!isCollapsed && (
+                <>
+                  <span className="sidebar-button-text">Extras</span>
+                  <ChevronIcon isOpen={extrasExpanded} />
+                </>
+              )}
+            </span>
+          </button>
+          
+          {/* Submenú desplegable */}
+          {extrasExpanded && !isCollapsed && (
+            <div className="sidebar-submenu">
+              {/* MySQL con desplegable */}
+              <button 
+                onClick={() => {
+                  handleOptionClick('extras-heidisql');
+                  if (!mysqlExpanded) {
+                    toggleMysql();
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  toggleMysql();
+                }}
+                className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-heidisql' || selectedOption === 'extras-database' ? 'active' : ''} ${mysqlExpanded ? 'expanded' : ''}`}
+                title="Click para ver phpMyAdmin | Click derecho para expandir"
+              >
+                <span className="sidebar-button-content">
+                  <span className="sidebar-button-text">🐬 MySQL</span>
+                  <ChevronIcon isOpen={mysqlExpanded} />
+                </span>
+              </button>
+              
+              {/* Submenú de MySQL */}
+              {mysqlExpanded && (
+                <div className="sidebar-submenu sidebar-submenu-nested">
+                  <button 
+                    onClick={() => handleOptionClick('extras-database')}
+                    className={`sidebar-button sidebar-submenu-item ${selectedOption === 'extras-database' ? 'active' : ''}`}
+                    title="Gestión de MariaDB"
+                  >
+                    <span className="sidebar-button-content">
+                      <span className="sidebar-button-text">🗄️ Base de datos</span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         
         <div className="sidebar-divider"></div>
         

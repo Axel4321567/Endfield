@@ -23,6 +23,18 @@ import { registerAppHandlers } from './handlers/ipc-handlers.js';
 import { registerDiscordHandlers } from './handlers/discord-handlers.js';
 import { registerSystemHandlers } from './handlers/system-handlers.js';
 import { registerDatabaseHandlers } from './handlers/database-handlers.js';
+import { registerPhpHandlers } from './handlers/php-handlers.js';
+import { registerPhpMyAdminHandlers, initializePhpMyAdminManager } from './handlers/phpmyadmin-handlers.js';
+import { registerDatabaseServiceHandlers } from './handlers/database-service-handlers.js';
+import { registerPasswordManagerHandlers } from './handlers/password-manager-handlers.js';
+import { registerCredentialCaptureHandlers } from './handlers/credential-capture-handlers.js';
+
+// Importar phpMyAdmin Manager
+import PhpMyAdminManager from './automation/phpmyadmin-manager.js';
+
+// Importar Services
+import DatabaseService from './services/database-service.js';
+import PasswordManagerService from './services/password-manager-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,6 +42,7 @@ const __dirname = path.dirname(__filename);
 // Variables globales
 let autoUpdater = null;
 let DatabaseManager = null;
+let phpMyAdminManager = null;
 
 // ==========================================
 // INICIALIZACIÓN DE LA APLICACIÓN
@@ -71,6 +84,28 @@ app.whenReady().then(async () => {
   registerDiscordHandlers();
   registerSystemHandlers();
   registerDatabaseHandlers();
+  registerPhpHandlers();
+  registerDatabaseServiceHandlers();
+  registerPasswordManagerHandlers();
+  registerCredentialCaptureHandlers();
+  
+  // Inicializar phpMyAdmin Manager
+  phpMyAdminManager = new PhpMyAdminManager();
+  initializePhpMyAdminManager(phpMyAdminManager);
+  registerPhpMyAdminHandlers();
+  console.log('✅ [phpMyAdmin] Manager inicializado');
+  
+  // Inicializar Database Service
+  DatabaseService.initializePool();
+  console.log('✅ [DatabaseService] Pool de conexiones inicializado');
+  
+  // Inicializar Password Manager (crear tablas si no existen)
+  try {
+    await PasswordManagerService.initializePasswordTables();
+    console.log('✅ [PasswordManager] Tablas inicializadas');
+  } catch (error) {
+    console.error('❌ [PasswordManager] Error inicializando:', error);
+  }
   
   // Configurar auto-updater
   autoUpdater = await initializeAutoUpdater();

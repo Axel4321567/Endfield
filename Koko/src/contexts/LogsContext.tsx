@@ -6,7 +6,7 @@ export interface LogEntry {
   timestamp: string;
   level: 'info' | 'error' | 'warn' | 'success';
   message: string;
-  section: 'dashboard' | 'koko-web' | 'discord' | 'database' | 'system';
+  section: 'dashboard' | 'koko-web' | 'discord' | 'database' | 'extras' | 'system';
 }
 
 interface LogsContextType {

@@ -2,15 +2,18 @@ import SimpleKokoWeb from '../KokoWeb/SimpleKokoWeb';
 import { Dashboard } from '../Dashboard/Dashboard';
 import DiscordPanelSimple from '../Discord/DiscordPanelSimple';
 import { DatabaseManager } from '../Database/DatabaseManager';
+import { PhpMyAdmin } from '../Database/PhpMyAdmin';
+import PasswordManager from '../PasswordManager';
 import type { TabsManager } from '../../types';
 import './MainContent.css';
 
 interface MainContentProps {
   selectedOption: string | null;
   tabsManager: TabsManager;
+  onSelectOption: (option: string) => void;
 }
 
-export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) => {
+export const MainContent = ({ selectedOption, tabsManager, onSelectOption }: MainContentProps) => {
   return (
     <div className="main-content-container">
       {/* Dashboard - mostrar solo cuando está seleccionado */}
@@ -33,16 +36,38 @@ export const MainContent = ({ selectedOption, tabsManager }: MainContentProps) =
         <DiscordPanelSimple />
       </div>
       
+      {/* Password Manager - Gestor de Contraseñas */}
+      <div style={{ 
+        display: selectedOption === 'password-manager' ? 'flex' : 'none',
+        flex: 1,
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <PasswordManager />
+      </div>
+      
       {/* Database - Gestión de MariaDB y HeidiSQL */}
       <div style={{ 
-        display: selectedOption === 'database' ? 'flex' : 'none',
+        display: (selectedOption === 'database' || selectedOption === 'extras-database') ? 'flex' : 'none',
         flex: 1,
         height: '100%',
         width: '100%',
         overflow: 'auto',
         padding: '1rem'
       }}>
-        <DatabaseManager />
+        <DatabaseManager onNavigate={onSelectOption} />
+      </div>
+      
+      {/* Extras - HeidiSQL / phpMyAdmin */}
+      <div style={{ 
+        display: selectedOption === 'extras-heidisql' ? 'flex' : 'none',
+        flex: 1,
+        height: '100%',
+        width: '100%',
+        overflow: 'hidden'
+      }}>
+        <PhpMyAdmin />
       </div>
       
       {/* Contenido de bienvenida - solo cuando no hay selección */}

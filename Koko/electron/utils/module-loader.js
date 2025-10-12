@@ -1,5 +1,9 @@
 import { app } from 'electron';
 import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 /**
  * Utilidades para cargar módulos de forma segura en aplicaciones empaquetadas
@@ -37,15 +41,22 @@ export async function initializeDatabaseManager() {
     let dbManagerPath;
     
     if (isDev) {
-      dbManagerPath = './automation/database-manager.js';
+      // En desarrollo, usar ruta absoluta desde electron/utils hacia electron/automation
+      dbManagerPath = path.join(__dirname, '..', 'automation', 'database-manager.js');
     } else {
       // En aplicaciones empaquetadas, buscar en resources
-      dbManagerPath = path.join(process.resourcesPath, 'automation', 'database-manager.js');
+      dbManagerPath = path.join(process.resourcesPath, 'app.asar', 'electron', 'automation', 'database-manager.js');
     }
     
-    console.log('🔍 [DatabaseManager] Intentando cargar desde:', dbManagerPath);
+    console.log('🔍 [DatabaseManager] Modo:', isDev ? 'Desarrollo' : 'Producción');
+    console.log('🔍 [DatabaseManager] __dirname:', __dirname);
+    console.log('🔍 [DatabaseManager] Ruta del archivo:', dbManagerPath);
     
-    const dbManagerModule = await import(dbManagerPath);
+    // Convertir a file:// URL para Windows
+    const fileURL = pathToFileURL(dbManagerPath).href;
+    console.log('🔍 [DatabaseManager] URL de importación:', fileURL);
+    
+    const dbManagerModule = await import(fileURL);
     const DatabaseManager = dbManagerModule.default || dbManagerModule.DatabaseManager;
     console.log('✅ [DatabaseManager] Módulo cargado exitosamente');
     return DatabaseManager;
@@ -64,6 +75,11 @@ export async function initializeDatabaseManager() {
       
       async install() {
         console.error('❌ DatabaseManager no disponible - no se puede instalar');
+        return { success: false, error: 'DatabaseManager no está disponible en este entorno' };
+      }
+      
+      async uninstall() {
+        console.error('❌ DatabaseManager no disponible - no se puede desinstalar');
         return { success: false, error: 'DatabaseManager no está disponible en este entorno' };
       }
       

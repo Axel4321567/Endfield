@@ -5,6 +5,12 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './', // Usar rutas relativas para aplicaciones empaquetadas
+  server: {
+    watch: {
+      // Ignorar carpeta resources para evitar recargas durante instalaciones
+      ignored: ['**/resources/**', '**/dist-electron/**', '**/node_modules/**']
+    }
+  },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

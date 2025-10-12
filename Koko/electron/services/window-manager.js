@@ -100,6 +100,24 @@ export async function createWindow() {
     }
   }
 
+  // Interceptar respuestas para modificar cabeceras de seguridad
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    // Permitir que localhost se cargue en iframes
+    if (details.url.includes('localhost')) {
+      const responseHeaders = { ...details.responseHeaders };
+      
+      // Eliminar cabeceras que bloquean iframe
+      delete responseHeaders['x-frame-options'];
+      delete responseHeaders['X-Frame-Options'];
+      delete responseHeaders['content-security-policy'];
+      delete responseHeaders['Content-Security-Policy'];
+      
+      callback({ responseHeaders });
+    } else {
+      callback({ responseHeaders: details.responseHeaders });
+    }
+  });
+
   // Manejar navegación externa - crear nueva pestaña en lugar de ventana externa
   win.webContents.setWindowOpenHandler(({ url }) => {
     console.log('🆕 [Koko] Solicitando nueva pestaña para:', url);

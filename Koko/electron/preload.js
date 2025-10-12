@@ -256,6 +256,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return ipcRenderer.invoke('database-install');
     },
 
+    // Desinstalar MariaDB
+    uninstall: () => {
+      console.log('🗑️ [Database] Desinstalando MariaDB...');
+      return ipcRenderer.invoke('database-uninstall');
+    },
+
     // Iniciar servicio de base de datos
     start: () => {
       console.log('▶️ [Database] Iniciando servicio MariaDB...');
@@ -287,12 +293,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return promise;
     },
 
-    // Abrir HeidiSQL
-    openHeidiSQL: () => {
-      console.log('🖥️ [Database] Abriendo HeidiSQL...');
-      return ipcRenderer.invoke('database-open-heidisql');
-    },
-
     // Obtener información completa de la base de datos
     getInfo: () => {
       console.log('ℹ️ [Database] Obteniendo información completa...');
@@ -315,6 +315,169 @@ contextBridge.exposeInMainWorld('electronAPI', {
     removeDownloadProgressListener: () => {
       ipcRenderer.removeAllListeners('database-download-progress');
     }
+  },
+
+  // 🐘 APIs de phpMyAdmin
+  phpMyAdmin: {
+    // Iniciar servidor phpMyAdmin
+    start: () => {
+      console.log('🐘 [phpMyAdmin] Iniciando servidor...');
+      return ipcRenderer.invoke('phpmyadmin:start');
+    },
+
+    // Detener servidor phpMyAdmin
+    stop: () => {
+      console.log('🛑 [phpMyAdmin] Deteniendo servidor...');
+      return ipcRenderer.invoke('phpmyadmin:stop');
+    },
+
+    // Obtener estado del servidor
+    getStatus: () => {
+      return ipcRenderer.invoke('phpmyadmin:status');
+    }
+  },
+
+  // 🗄️ APIs de Database Service (Koko DB)
+  db: {
+    // Test de conexión
+    testConnection: () => {
+      console.log('🔗 [DatabaseService] Testeando conexión...');
+      return ipcRenderer.invoke('db:test-connection');
+    },
+
+    // Obtener información de la base de datos
+    getInfo: () => {
+      console.log('📊 [DatabaseService] Obteniendo información de BD...');
+      return ipcRenderer.invoke('db:get-info');
+    },
+
+    // Ejecutar consulta SQL
+    query: (query, params = []) => {
+      console.log('📝 [DatabaseService] Ejecutando query:', query);
+      return ipcRenderer.invoke('db:query', query, params);
+    },
+
+    // Ejecutar transacción
+    transaction: (queries) => {
+      console.log('🔄 [DatabaseService] Ejecutando transacción con', queries.length, 'queries');
+      return ipcRenderer.invoke('db:transaction', queries);
+    }
+  },
+
+  // 🔐 APIs de Password Manager
+  passwordManager: {
+    // Inicializar tablas
+    init: () => {
+      console.log('🔧 [PasswordManager] Inicializando tablas...');
+      return ipcRenderer.invoke('password-manager:init');
+    },
+
+    // Guardar credencial
+    saveCredential: (data) => {
+      console.log('💾 [PasswordManager] Guardando credencial para:', data.domain);
+      return ipcRenderer.invoke('password-manager:save-credential', data);
+    },
+
+    // Buscar por dominio
+    findByDomain: (domain) => {
+      console.log('🔍 [PasswordManager] Buscando credenciales para:', domain);
+      return ipcRenderer.invoke('password-manager:find-by-domain', domain);
+    },
+
+    // Buscar por URL
+    findByUrl: (url) => {
+      console.log('🔍 [PasswordManager] Buscando credenciales para URL:', url);
+      return ipcRenderer.invoke('password-manager:find-by-url', url);
+    },
+
+    // Actualizar credencial
+    updateCredential: (id, data) => {
+      console.log('✏️ [PasswordManager] Actualizando credencial:', id);
+      return ipcRenderer.invoke('password-manager:update-credential', id, data);
+    },
+
+    // Marcar como usado
+    markUsed: (id) => {
+      return ipcRenderer.invoke('password-manager:mark-used', id);
+    },
+
+    // Eliminar credencial
+    deleteCredential: (id) => {
+      console.log('🗑️ [PasswordManager] Eliminando credencial:', id);
+      return ipcRenderer.invoke('password-manager:delete-credential', id);
+    },
+
+    // Obtener todas las credenciales
+    getAll: () => {
+      console.log('📋 [PasswordManager] Obteniendo todas las credenciales');
+      return ipcRenderer.invoke('password-manager:get-all');
+    },
+
+    // Guardar token
+    saveToken: (data) => {
+      console.log('🎫 [PasswordManager] Guardando token para:', data.serviceName);
+      return ipcRenderer.invoke('password-manager:save-token', data);
+    },
+
+    // Obtener tokens por servicio
+    getTokens: (serviceName) => {
+      console.log('🎫 [PasswordManager] Obteniendo tokens de:', serviceName);
+      return ipcRenderer.invoke('password-manager:get-tokens', serviceName);
+    }
+  },
+
+  // 🔐 APIs de Captura de Credenciales
+  credentialCapture: {
+    // Inyectar script de captura en un webContents
+    inject: (webContentsId) => {
+      console.log('💉 [CredentialCapture] Inyectando script en webContents:', webContentsId);
+      return ipcRenderer.invoke('credential-capture:inject', webContentsId);
+    },
+
+    // Procesar credencial capturada
+    process: (credentialData) => {
+      console.log('🔐 [CredentialCapture] Procesando credencial capturada');
+      return ipcRenderer.invoke('credential-capture:process', credentialData);
+    },
+
+    // Buscar credenciales guardadas para una URL
+    checkSaved: (url) => {
+      console.log('🔍 [CredentialCapture] Buscando credenciales para:', url);
+      return ipcRenderer.invoke('credential-capture:check-saved', url);
+    },
+
+    // Obtener script de captura
+    getScript: () => {
+      console.log('📜 [CredentialCapture] Obteniendo script de captura');
+      return ipcRenderer.invoke('credential-capture:get-script');
+    },
+
+    // Enviar notificación de captura
+    notify: (data) => {
+      console.log('📢 [CredentialCapture] Enviando notificación:', data.type);
+      ipcRenderer.send('credential-capture:notify', data);
+    },
+
+    // Escuchar eventos de captura
+    onEvent: (callback) => {
+      const listener = (event, data) => callback(data);
+      ipcRenderer.on('credential-capture:event', listener);
+      return () => ipcRenderer.removeListener('credential-capture:event', listener);
+    }
+  }
+});
+
+// Exponer objeto electron para compatibilidad con hooks
+contextBridge.exposeInMainWorld('electron', {
+  ipcRenderer: {
+    invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
+    on: (channel, callback) => {
+      const subscription = (event, ...args) => callback(event, ...args);
+      ipcRenderer.on(channel, subscription);
+      return subscription;
+    },
+    removeListener: (channel, callback) => ipcRenderer.removeListener(channel, callback),
+    send: (channel, ...args) => ipcRenderer.send(channel, ...args)
   }
 });
 
@@ -322,3 +485,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 console.log('🚀 Electron preload script loaded successfully');
 console.log('✅ [Koko] Sistema de navegación inteligente disponible en window.electronAPI.navigation');
 console.log('✅ [Database] APIs de base de datos disponibles en window.electronAPI.database');
+console.log('✅ [PHP] APIs de PHP disponibles en window.electron.ipcRenderer');
+console.log('✅ [phpMyAdmin] APIs de phpMyAdmin disponibles en window.electronAPI.phpMyAdmin');
+console.log('✅ [PasswordManager] APIs de gestor de contraseñas disponibles en window.electronAPI.passwordManager');
+console.log('✅ [CredentialCapture] APIs de captura de credenciales disponibles en window.electronAPI.credentialCapture');

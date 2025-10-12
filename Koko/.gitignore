@@ -44,6 +44,16 @@ linux-unpacked/
 .env.test.local
 .env.production.local
 
+# Database and server resources
+resources/mariadb/server/
+resources/php/server/
+resources/phpmyadmin/
+
+# Test and check scripts
+check-*.js
+save-*.js
+test-*.js
+
 # Coverage directory used by tools like istanbul
 coverage/
 *.lcov
@@ -303,3 +313,16 @@ query
 queries
 debug-*
 test-query*
+
+# ========================================
+# PHP y phpMyAdmin (instalación local)
+# ========================================
+# PHP portable completo
+resources/php/
+# phpMyAdmin completo excepto README
+resources/phpmyadmin/*
+!resources/phpmyadmin/README.md
+# Archivos de configuración generados automáticamente
+resources/phpmyadmin/config.inc.php
+# MariaDB instalador (archivo grande)
+resources/mariadb/*.msi

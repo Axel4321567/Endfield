@@ -105,6 +105,35 @@ export class DatabaseService {
   }
 
   /**
+   * Desinstalar MariaDB del sistema
+   */
+  public async uninstallMariaDB(): Promise<DatabaseResult> {
+    if (!this.checkElectronAPI()) {
+      return { success: false, error: 'APIs de Electron no disponibles' };
+    }
+
+    try {
+      console.log('🗑️ [DatabaseService] Iniciando desinstalación de MariaDB...');
+      const result = await window.electronAPI!.database!.uninstall();
+      
+      if (result.success) {
+        console.log('✅ [DatabaseService] MariaDB desinstalado correctamente');
+        this.clearStatusCache();
+      } else {
+        console.error('❌ [DatabaseService] Error en desinstalación:', result.error);
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ [DatabaseService] Error en desinstalación:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Error desconocido'
+      };
+    }
+  }
+
+  /**
    * Ejecutar diagnósticos del sistema para detectar problemas
    */
   public async runDiagnostics(): Promise<DiagnosticResult> {

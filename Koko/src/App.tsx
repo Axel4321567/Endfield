@@ -29,7 +29,7 @@ function AppContent() {
     });
   }, [addLog]);
 
-  const getSectionForLog = useCallback((option: SidebarOption): 'dashboard' | 'koko-web' | 'discord' | 'database' | 'system' => {
+  const getSectionForLog = useCallback((option: SidebarOption): 'dashboard' | 'koko-web' | 'discord' | 'database' | 'extras' | 'system' => {
     switch (option) {
       case 'dashboard':
         return 'dashboard';
@@ -39,6 +39,8 @@ function AppContent() {
         return 'discord';
       case 'database':
         return 'database';
+      case 'extras':
+        return 'extras';
       default:
         return 'system';
     }
@@ -59,6 +61,7 @@ function AppContent() {
           <MainContent 
             selectedOption={selectedOption}
             tabsManager={tabsManager}
+            onSelectOption={handleSelectOption}
           />
           {terminalOpen && (
             <div className="terminal-bottom">

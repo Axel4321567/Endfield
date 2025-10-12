@@ -1,0 +1,296 @@
+/* 🐘 PhpMyAdmin Styles */
+
+.phpmyadmin-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #fff;
+}
+
+/* Header */
+.phpmyadmin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.phpmyadmin-header__title {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.phpmyadmin-header__title h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #f39c12;
+}
+
+.phpmyadmin-header__status {
+  display: flex;
+  gap: 1rem;
+}
+
+.phpmyadmin-status {
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.phpmyadmin-status--running {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid #2ecc71;
+}
+
+.phpmyadmin-status--stopped {
+  background: rgba(149, 165, 166, 0.2);
+  color: #95a5a6;
+  border: 1px solid #95a5a6;
+}
+
+.phpmyadmin-header__controls {
+  display: flex;
+  gap: 1rem;
+}
+
+/* Buttons */
+.phpmyadmin-btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.phpmyadmin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.phpmyadmin-btn--start {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.phpmyadmin-btn--start:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(46, 204, 113, 0.4);
+}
+
+.phpmyadmin-btn--stop {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+}
+
+.phpmyadmin-btn--stop:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(231, 76, 60, 0.4);
+}
+
+.phpmyadmin-btn--check {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: white;
+}
+
+.phpmyadmin-btn--check:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+}
+
+/* Error Message */
+.phpmyadmin-error {
+  margin: 1rem 2rem;
+  padding: 1rem;
+  background: rgba(231, 76, 60, 0.1);
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  color: #e74c3c;
+}
+
+/* Content Area */
+.phpmyadmin-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Iframe */
+.phpmyadmin-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: white;
+}
+
+/* Placeholder */
+.phpmyadmin-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 2rem;
+}
+
+.phpmyadmin-placeholder__content {
+  text-align: center;
+  max-width: 500px;
+}
+
+.phpmyadmin-placeholder__content h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #f39c12;
+}
+
+.phpmyadmin-placeholder__content p {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Installation Instructions */
+.phpmyadmin-install {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+  overflow-y: auto;
+}
+
+.phpmyadmin-install__header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.phpmyadmin-install__header h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+  color: #f39c12;
+}
+
+.phpmyadmin-install__header p {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.phpmyadmin-install__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+.phpmyadmin-install__step {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.phpmyadmin-install__step:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(243, 156, 18, 0.5);
+  transform: translateX(5px);
+}
+
+.phpmyadmin-install__step-number {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  border-radius: 50%;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.phpmyadmin-install__step-content {
+  flex: 1;
+}
+
+.phpmyadmin-install__step-content h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.3rem;
+  color: #f39c12;
+}
+
+.phpmyadmin-install__step-content p {
+  margin: 0.5rem 0;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.6;
+}
+
+.phpmyadmin-install__link {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.phpmyadmin-install__link:hover {
+  color: #5dade2;
+  text-decoration: underline;
+}
+
+.phpmyadmin-install__path {
+  margin-top: 1rem !important;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+}
+
+.phpmyadmin-install__path code {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.phpmyadmin-install__note {
+  padding: 1.5rem;
+  background: rgba(52, 152, 219, 0.1);
+  border: 1px solid #3498db;
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+.phpmyadmin-install__note strong {
+  color: #3498db;
+}
+
+/* Scrollbar */
+.phpmyadmin-install::-webkit-scrollbar {
+  width: 8px;
+}
+
+.phpmyadmin-install::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.phpmyadmin-install::-webkit-scrollbar-thumb {
+  background: rgba(243, 156, 18, 0.5);
+  border-radius: 4px;
+}
+
+.phpmyadmin-install::-webkit-scrollbar-thumb:hover {
+  background: rgba(243, 156, 18, 0.7);
+}

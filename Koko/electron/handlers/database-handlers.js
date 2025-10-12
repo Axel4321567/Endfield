@@ -6,6 +6,7 @@ import { ipcMain } from 'electron';
 
 let databaseManager = null;
 let DatabaseManager = null;
+let lastKnownStatus = null; // Cache del último estado conocido
 
 /**
  * Asegura que DatabaseManager esté inicializado
@@ -42,9 +43,31 @@ export function registerDatabaseHandlers() {
       
       const result = await manager.install();
       console.log('✅ [Database] Instalación completada:', result);
+      
+      // Limpiar cache después de instalar
+      lastKnownStatus = null;
+      
       return result;
     } catch (error) {
       console.error('❌ [Database] Error en instalación:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  // Desinstalar MariaDB
+  ipcMain.handle('database-uninstall', async () => {
+    try {
+      console.log('🗑️ [Database] Iniciando desinstalación de MariaDB...');
+      const manager = await ensureDatabaseManager();
+      const result = await manager.uninstall();
+      console.log('✅ [Database] Desinstalación completada:', result);
+      
+      // Limpiar cache después de desinstalar
+      lastKnownStatus = null;
+      
+      return result;
+    } catch (error) {
+      console.error('❌ [Database] Error al desinstalar:', error);
       return { success: false, error: error.message };
     }
   });
@@ -111,6 +134,9 @@ export function registerDatabaseHandlers() {
       logToRenderer('📥 [Main] === RESPUESTA DE DatabaseManager ===');
       logToRenderer('📥 [Main] Resultado raw: ' + JSON.stringify(result, null, 2));
       
+      // Guardar en cache para database-info
+      lastKnownStatus = result;
+      
       // Adaptar formato para frontend
       const adaptedResult = {
         success: true,
@@ -154,36 +180,21 @@ export function registerDatabaseHandlers() {
     }
   });
 
-  // Abrir HeidiSQL
-  ipcMain.handle('database-open-heidisql', async () => {
-    try {
-      console.log('🖥️ [Database] Abriendo HeidiSQL...');
-      const manager = await ensureDatabaseManager();
-      const result = await manager.openHeidiSQL();
-      console.log('✅ [Database] HeidiSQL abierto:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ [Database] Error al abrir HeidiSQL:', error);
-      return { success: false, error: error.message };
-    }
-  });
-
-  // Obtener información completa
+  // Obtener información completa (usa el estado cacheado)
   ipcMain.handle('database-info', async () => {
     try {
-      console.log('ℹ️ [Database] Obteniendo información completa...');
-      const manager = await ensureDatabaseManager();
-      const status = await manager.getMariaDBStatus();
+      console.log('ℹ️ [Database] Obteniendo información completa (desde cache)...');
       
+      // Retornar info estática + estado del cache
       return {
         success: true,
-        status: status.status,
-        installed: status.installed,
-        version: status.version || 'N/A',
+        status: lastKnownStatus?.state || 'unknown',
+        installed: lastKnownStatus?.isInstalled || false,
+        version: lastKnownStatus?.version || 'N/A',
         port: 3306,
         host: 'localhost',
         database: 'KokoDB',
-        uptime: status.uptime || null
+        uptime: null
       };
     } catch (error) {
       console.error('❌ [Database] Error al obtener información:', error);
@@ -191,7 +202,11 @@ export function registerDatabaseHandlers() {
         success: false, 
         error: error.message,
         status: 'error',
-        installed: false
+        installed: false,
+        version: 'N/A',
+        port: 3306,
+        host: 'localhost',
+        database: 'KokoDB'
       };
     }
   });

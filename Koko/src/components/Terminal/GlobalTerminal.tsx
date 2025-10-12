@@ -15,6 +15,7 @@ const sectionIcons: SectionIcon = {
   database: '🗄️',
   discord: '💬',
   'koko-web': '🌐',
+  extras: '✨',
   system: '⚙️',
   default: '📟'
 };

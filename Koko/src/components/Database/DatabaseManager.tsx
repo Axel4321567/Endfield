@@ -1,381 +1,68 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { databaseService } from '../../services/DatabaseService';
-import type { DatabaseStatus, DatabaseInfo, DiagnosticResult } from '../../services/DatabaseService';
 import { useLogger } from '../../contexts/LogsContext';
+import { useMariaDB } from '../../hooks/useMariaDB';
+import { usePhp } from '../../hooks/usePhp';
+import { usePhpMyAdmin } from '../../hooks/usePhpMyAdmin';
 import './DatabaseManager.css';
 
 interface DatabaseManagerProps {
   className?: string;
+  onNavigate?: (option: string) => void;
 }
 
 /**
- * 🗄️ Componente para gestión de MariaDB y HeidiSQL
- * Permite instalar, iniciar, detener y monitorear la base de datos
+ * 🗄️ Componente refactorizado para gestión de MariaDB, PHP y phpMyAdmin
+ * Utiliza hooks modulares para cada servicio
  */
 export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) => {
-  const [status, setStatus] = useState<DatabaseStatus | null>(null);
-  const [info, setInfo] = useState<DatabaseInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Hooks modulares para cada servicio
+  const mariadb = useMariaDB();
+  const php = usePhp();
+  const phpMyAdmin = usePhpMyAdmin();
+  
+  // Estados locales de UI
   const [autoRefresh, setAutoRefresh] = useState(false);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticResult | null>(null);
   const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<{ progress: number; phase: string } | null>(null);
-  const [showHelp, setShowHelp] = useState(false);
+  const [showSystemState, setShowSystemState] = useState(false);
+  const [showPhpState, setShowPhpState] = useState(false);
+  const [showPhpMyAdminState, setShowPhpMyAdminState] = useState(false);
   
-  // Usar el sistema global de logs
-  const { addLog: globalAddLog } = useLogger();
+  // Referencia para logs iniciales
   const hasLoggedInit = useRef(false);
-  const isInitializing = useRef(false);
-  const isMounted = useRef(true); // Inicializar como true desde el principio
-  
-  // Función helper para logs de database con useCallback
-  const addLog = useCallback((message: string, level: 'info' | 'success' | 'warn' | 'error' = 'info') => {
-    globalAddLog(message, level, 'database');
-  }, [globalAddLog]);
+  const { addLog } = useLogger();
 
-  // Función para cargar estado - definida antes de los useEffect
-  const loadStatus = useCallback(async (forceRefresh = false) => {
-    console.log('🚀 [React] === INICIANDO loadStatus ===');
-    console.log('🚀 [React] forceRefresh:', forceRefresh);
-    console.log('🚀 [React] isInitializing.current:', isInitializing.current);
-    console.log('🚀 [React] isMounted.current:', isMounted.current);
-    
-    // Forzar isMounted a true para el botón manual
-    if (forceRefresh) {
-      console.log('🔧 [React] Forzando isMounted a true para refresh manual');
-      isMounted.current = true;
-    }
-    
-    // Prevenir múltiples llamadas simultáneas
-    if (isInitializing.current || !isMounted.current) {
-      console.log('⚠️ [React] Saliendo temprano - isInitializing o no mounted');
-      return;
-    }
-    
-    try {
-      console.log('✅ [React] Continuando con loadStatus...');
-      isInitializing.current = true;
-      setLoading(true);
-      addLog('📊 Cargando estado de la base de datos...', 'info');
-      setError(null);
-
-      console.log('📞 [React] Llamando a databaseService.getStatus...');
-      // Obtener estado sin cache si es forzado
-      const statusResult = await databaseService.getStatus(!forceRefresh);
-      
-      console.log('🔍 [React] === RESPUESTA DE DatabaseService ===');
-      console.log('🔍 [React] statusResult:', statusResult);
-      console.log('🔍 [React] Tipo:', typeof statusResult);
-      console.log('🔍 [React] JSON:', JSON.stringify(statusResult, null, 2));
-      
-      if (!statusResult || !isMounted.current) {
-        throw new Error('No se pudo obtener el estado de la base de datos');
-      }
-      
-      setStatus(statusResult);
-
-      // Log detallado del estado recibido
-      addLog(`🔍 Estado detallado recibido:`, 'info');
-      addLog(`  - success: ${statusResult.success}`, 'info');
-      addLog(`  - installed: ${statusResult.installed}`, 'info');
-      addLog(`  - status: ${statusResult.status}`, 'info');
-      addLog(`  - version: ${statusResult.version || 'no disponible'}`, 'info');
-      addLog(`  - serviceName: ${statusResult.serviceName || 'no disponible'}`, 'info');
-      addLog(`  - error: ${statusResult.error || 'ninguno'}`, 'info');
-
-      if (statusResult.success) {
-        addLog(`✅ Estado cargado: ${statusResult.status} (Instalado: ${statusResult.installed ? 'Sí' : 'No'})`, 'success');
-      } else {
-        const errorMsg = statusResult.error || 'Error desconocido al obtener estado';
-        addLog(`❌ Error al cargar estado: ${errorMsg}`, 'error');
-      }
-
-      // Si está instalado, obtener información
-      if (statusResult.success && statusResult.installed && isMounted.current) {
-        const infoResult = await databaseService.getInfo();
-        if (isMounted.current) {
-          setInfo(infoResult);
-        }
-      }
-    } catch (err) {
-      if (isMounted.current) {
-        const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-        addLog(`❌ Error en loadStatus: ${errorMessage}`, 'error');
-        setError(errorMessage);
-      }
-    } finally {
-      if (isMounted.current) {
-        setLoading(false);
-      }
-      isInitializing.current = false;
-    }
-  }, [addLog]);
-
-  // Actualizar estado cada 10 segundos si autoRefresh está activo
+  // Log inicial y carga de estados
   useEffect(() => {
-    if (!autoRefresh || !isMounted.current) return;
-
-    const interval = setInterval(async () => {
-      if (!isMounted.current || isInitializing.current) return;
+    if (!hasLoggedInit.current) {
+      addLog('🗄️ Gestor de base de datos iniciado', 'info', 'database');
+      hasLoggedInit.current = true;
       
-      try {
-        // Usar cache en auto-refresh para reducir logs
-        const newStatus = await databaseService.getStatus(true);
-        
-        if (isMounted.current) {
-          setStatus(newStatus);
-          
-          if (newStatus.success && newStatus.installed) {
-            const newInfo = await databaseService.getInfo();
-            if (isMounted.current) {
-              setInfo(newInfo);
-            }
-          }
-        }
-      } catch (err) {
-        // Solo log de errores en auto-refresh
-        console.error('Error silencioso en auto-refresh:', err);
-      }
+      // Cargar estados iniciales
+      mariadb.loadStatus();
+      php.loadStatus();
+      phpMyAdmin.loadStatus();
+    }
+  }, [mariadb, php, phpMyAdmin, addLog]);
+
+  // Auto-refresh cada 10 segundos
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      mariadb.loadStatus();
+      php.loadStatus();
+      phpMyAdmin.loadStatus();
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh]);
+  }, [autoRefresh, mariadb, php, phpMyAdmin]);
 
-  // Cargar estado inicial - solo una vez
-  useEffect(() => {
-    console.log('🚀 [React] useEffect inicial ejecutándose...');
-    console.log('🚀 [React] Estableciendo estado inicial...');
-    
-    // Asegurar que el componente esté marcado como montado
-    isMounted.current = true;
-    console.log('✅ [React] isMounted establecido a true');
-    
-    // Log inicial si no se ha hecho
-    if (!hasLoggedInit.current) {
-      addLog('🗄️ Gestor de base de datos iniciado', 'info');
-      hasLoggedInit.current = true;
-      
-      // Cargar estado inicial solo la primera vez
-      console.log('🚀 [React] Cargando estado inicial...');
-      loadStatus();
-    }
-    
-    // Cleanup function - SOLO al desmontar realmente
-    return () => {
-      console.log('🧹 [React] Componente desmontándose - estableciendo isMounted a false');
-      isMounted.current = false;
-    };
-  }, []); // Sin dependencias para evitar re-renders
-
-  // Configurar listener para progreso de descarga
-  useEffect(() => {
-    if (window.electronAPI?.database?.onDownloadProgress) {
-      window.electronAPI.database.onDownloadProgress((progressData) => {
-        setDownloadProgress(progressData);
-        addLog(`📥 ${progressData.phase} - ${progressData.progress}%`, 'info');
-      });
-    }
-
-    // Cleanup listener on unmount
-    return () => {
-      if (window.electronAPI?.database?.removeDownloadProgressListener) {
-        window.electronAPI.database.removeDownloadProgressListener();
-      }
-    };
-  }, [addLog]);
-
-  const handleInstall = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setDiagnostics(null);
-      setDownloadProgress({ progress: 0, phase: 'Iniciando instalación...' });
-      addLog('🔧 Iniciando proceso de instalación de MariaDB...', 'info');
-      
-      // Ejecutar diagnósticos primero
-      addLog('🔍 Ejecutando diagnósticos del sistema...');
-      setDownloadProgress({ progress: 10, phase: 'Ejecutando diagnósticos...' });
-      const diagResult = await databaseService.runDiagnostics();
-      setDiagnostics(diagResult);
-      
-      if (!diagResult.success) {
-        addLog('⚠️ Se encontraron problemas en los diagnósticos', 'warn');
-        diagResult.issues.forEach(issue => {
-          addLog(`❌ ${issue.type.toUpperCase()}: ${issue.message}`);
-        });
-        
-        const criticalIssues = diagResult.issues.filter(issue => 
-          issue.type === 'admin' || issue.type === 'port'
-        );
-        
-        if (criticalIssues.length > 0) {
-          const errorMsg = `Problemas críticos: ${criticalIssues.map(i => i.message).join(', ')}`;
-          setError(errorMsg);
-          setShowDiagnostics(true);
-          addLog(`🚫 Instalación cancelada: ${errorMsg}`);
-          setDownloadProgress(null);
-          return;
-        }
-      } else {
-        addLog('✅ Diagnósticos completados: { success: true, issues: [] }', 'success');
-      }
-      
-      setDownloadProgress({ progress: 20, phase: 'Descargando MariaDB...' });
-      addLog('📦 Descargando e instalando MariaDB...', 'info');
-      const result = await databaseService.installMariaDB();
-      
-      if (result.success) {
-        setDownloadProgress({ progress: 100, phase: 'Instalación completada' });
-        addLog('✅ MariaDB instalado exitosamente', 'success');
-        addLog('🔄 Recargando estado en 2 segundos...');
-        setTimeout(() => {
-          loadStatus();
-          setDownloadProgress(null);
-        }, 2000);
-      } else {
-        const errorMsg = result.error || 'Error en la instalación';
-        setError(errorMsg);
-        setShowDiagnostics(true);
-        addLog(`❌ Error en instalación: ${errorMsg}`);
-        setDownloadProgress(null);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      addLog(`❌ Excepción durante instalación: ${errorMessage}`);
-      setDownloadProgress(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const runDiagnostics = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      addLog('🔍 Ejecutando diagnósticos del sistema...');
-      
-      const result = await databaseService.runDiagnostics();
-      setDiagnostics(result);
-      setShowDiagnostics(true);
-      
-      if (result.success) {
-        addLog('✅ Diagnósticos completados: No se encontraron problemas críticos');
-      } else {
-        addLog('⚠️ Diagnósticos completados: Se encontraron problemas');
-        result.issues.forEach(issue => {
-          addLog(`❌ ${issue.type.toUpperCase()}: ${issue.message}`);
-          addLog(`💡 Solución: ${issue.solution}`);
-        });
-        setError('Se encontraron problemas en el sistema');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      addLog(`❌ Error en diagnósticos: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStart = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      addLog('▶️ Iniciando servicio MariaDB...');
-      
-      const result = await databaseService.startService();
-      
-      if (result.success) {
-        addLog('✅ Servicio MariaDB iniciado exitosamente');
-        addLog('🔄 Recargando estado en 2 segundos...');
-        setTimeout(() => loadStatus(), 2000);
-      } else {
-        const errorMsg = result.error || 'Error al iniciar servicio';
-        setError(errorMsg);
-        addLog(`❌ Error al iniciar servicio: ${errorMsg}`);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      addLog(`❌ Excepción al iniciar servicio: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStop = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      addLog('⏹️ Deteniendo servicio MariaDB...');
-      
-      const result = await databaseService.stopService();
-      
-      if (result.success) {
-        addLog('✅ Servicio MariaDB detenido exitosamente');
-        addLog('🔄 Recargando estado en 2 segundos...');
-        setTimeout(() => loadStatus(), 2000);
-      } else {
-        const errorMsg = result.error || 'Error al detener servicio';
-        setError(errorMsg);
-        addLog(`❌ Error al detener servicio: ${errorMsg}`);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      addLog(`❌ Excepción al detener servicio: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOpenHeidiSQL = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      addLog('🖥️ Abriendo HeidiSQL...');
-      
-      const result = await databaseService.openHeidiSQL();
-      
-      if (result.success) {
-        addLog('✅ HeidiSQL abierto exitosamente');
-      } else {
-        const errorMsg = result.error || 'Error al abrir HeidiSQL';
-        setError(errorMsg);
-        addLog(`❌ Error al abrir HeidiSQL: ${errorMsg}`);
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
-      addLog(`❌ Excepción al abrir HeidiSQL: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getStatusColor = () => {
-    if (!status) return 'gray';
-    
-    switch (status.status) {
-      case 'running':
-        return 'green';
-      case 'stopped':
-        return 'orange';
-      case 'installing':
-        return 'blue';
-      case 'error':
-        return 'red';
-      default:
-        return 'gray';
-    }
-  };
-
+  // Helper functions
   const getDebugStatusColor = () => {
-    if (!status) return 'gray';
+    if (!mariadb.status) return 'gray';
     
-    switch (status.status) {
+    switch (mariadb.status.status) {
       case 'running':
         return 'running';
       case 'stopped':
@@ -386,25 +73,6 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
         return 'red';
       default:
         return 'unknown';
-    }
-  };
-
-  const getStatusText = () => {
-    if (!status) return 'Cargando...';
-    
-    if (!status.installed) return 'No instalado';
-    
-    switch (status.status) {
-      case 'running':
-        return 'Ejecutándose';
-      case 'stopped':
-        return 'Detenido';
-      case 'installing':
-        return 'Instalando...';
-      case 'error':
-        return 'Error';
-      default:
-        return 'Estado desconocido';
     }
   };
 
@@ -430,22 +98,21 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
         <div className="database-manager__controls">
           <button
             onClick={() => {
-              console.log('🔄 [React] === BOTÓN ACTUALIZAR PRESIONADO ===');
-              addLog('🔄 Forzando actualización de estado...', 'info');
-              console.log('🗑️ [React] Limpiando cache del servicio...');
+              addLog('🔄 Forzando actualización de estado...', 'info', 'database');
               databaseService.clearStatusCache();
-              console.log('📞 [React] Llamando a loadStatus(true)...');
-              loadStatus(true);
+              mariadb.loadStatus();
+              php.loadStatus();
+              phpMyAdmin.loadStatus();
             }}
-            disabled={loading}
+            disabled={mariadb.loading || php.loading || phpMyAdmin.loading}
             className="database-manager__refresh-btn"
             title="Actualizar estado"
           >
             🔄
           </button>
           <button
-            onClick={runDiagnostics}
-            disabled={loading}
+            onClick={mariadb.runDiagnostics}
+            disabled={mariadb.loading}
             className="database-manager__diagnostics-btn"
             title="Ejecutar diagnósticos"
           >
@@ -456,15 +123,15 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
               if (window.electronAPI?.utils?.showDevTools) {
                 try {
                   await window.electronAPI.utils.showDevTools();
-                  addLog('🔧 DevTools abiertas', 'success');
+                  addLog('🔧 DevTools abiertas', 'success', 'database');
                 } catch (error) {
-                  addLog('❌ Error abriendo DevTools', 'error');
+                  addLog('❌ Error abriendo DevTools', 'error', 'database');
                 }
               } else {
-                addLog('❌ DevTools no disponibles', 'error');
+                addLog('❌ DevTools no disponibles', 'error', 'database');
               }
             }}
-            disabled={loading}
+            disabled={mariadb.loading}
             className="database-manager__diagnostics-btn"
             title="Abrir DevTools (F12)"
           >
@@ -481,14 +148,24 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
         </div>
       </div>
 
-      {error && (
+      {/* Mostrar errores de MariaDB */}
+      {mariadb.error && (
         <div className="database-manager__error">
-          ❌ {error}
-          <button onClick={() => setError(null)}>✕</button>
+          ❌ {mariadb.error}
+          <button onClick={() => mariadb.loadStatus()}>✕</button>
         </div>
       )}
 
-      {showDiagnostics && diagnostics && (
+      {/* Mostrar errores de PHP */}
+      {php.error && (
+        <div className="database-manager__error">
+          ❌ PHP: {php.error}
+          <button onClick={() => php.loadStatus()}>✕</button>
+        </div>
+      )}
+
+      {/* Panel de diagnósticos */}
+      {showDiagnostics && mariadb.diagnostics && (
         <div className="database-manager__diagnostics">
           <div className="database-manager__diagnostics-header">
             <h3>🔍 Diagnósticos del Sistema</h3>
@@ -500,13 +177,13 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
             </button>
           </div>
           
-          {diagnostics.success ? (
+          {mariadb.diagnostics.success ? (
             <div className="database-manager__diagnostics-success">
               ✅ No se encontraron problemas críticos
             </div>
           ) : (
             <div className="database-manager__diagnostics-issues">
-              {diagnostics.issues.map((issue, index) => (
+              {mariadb.diagnostics.issues.map((issue, index) => (
                 <div 
                   key={index} 
                   className={`database-manager__diagnostic-issue database-manager__diagnostic-issue--${issue.type}`}
@@ -529,215 +206,329 @@ export const DatabaseManager: React.FC<DatabaseManagerProps> = ({ className }) =
         </div>
       )}
 
-      <div className="database-manager__status">
-        <div className="database-manager__status-indicator">
-          <div 
-            className={`database-manager__status-dot database-manager__status-dot--${getStatusColor()}`}
-          />
-          <span className="database-manager__status-text">
-            {getStatusText()}
-          </span>
-        </div>
-        
-        {status?.version && (
-          <div className="database-manager__version">
-            Versión: {status.version}
-          </div>
-        )}
-      </div>
-
-      {info && info.success && (
-        <div className="database-manager__info">
-          <div className="database-manager__info-grid">
-            <div className="database-manager__info-item">
-              <span className="database-manager__info-label">Host:</span>
-              <span className="database-manager__info-value">{info.host}</span>
-            </div>
-            <div className="database-manager__info-item">
-              <span className="database-manager__info-label">Puerto:</span>
-              <span className="database-manager__info-value">{info.port}</span>
-            </div>
-            <div className="database-manager__info-item">
-              <span className="database-manager__info-label">Base de datos:</span>
-              <span className="database-manager__info-value">{info.database}</span>
-            </div>
-            <div className="database-manager__info-item">
-              <span className="database-manager__info-label">Tiempo activo:</span>
-              <span className="database-manager__info-value">{formatUptime(info.uptime)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {downloadProgress && (
+      {/* Barra de progreso de descarga */}
+      {mariadb.downloadProgress && (
         <div className="database-manager__progress">
           <div className="database-manager__progress-header">
             <span className="database-manager__progress-text">
-              {downloadProgress.phase}
+              {mariadb.downloadProgress.phase}
             </span>
             <span className="database-manager__progress-percent">
-              {downloadProgress.progress}%
+              {mariadb.downloadProgress.progress}%
             </span>
           </div>
           <div className="database-manager__progress-bar">
             <div 
               className="database-manager__progress-fill"
-              style={{ width: `${downloadProgress.progress}%` }}
+              style={{ width: `${mariadb.downloadProgress.progress}%` }}
             />
           </div>
         </div>
       )}
 
-      {/* Debug Panel - Diseño mejorado */}
+      {/* Panel de MariaDB */}
       <div className="database-manager__debug">
         <div className="database-manager__debug-header">
-          <h3>🔍 Estado del Sistema</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h3>🗄️ MariaDB</h3>
+            
+            {/* MariaDB Status y botones integrados en el header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {mariadb.status?.installed ? (
+                <>
+                  <div className={`database-manager__status-badge database-manager__status-badge--${mariadb.status.status === 'running' ? 'running' : 'stopped'}`}>
+                    {mariadb.status.status === 'running' ? '🟢 Ejecutándose' : '🔴 Detenido'}
+                  </div>
+                  
+                  {mariadb.status.status === 'stopped' && (
+                    <button
+                      onClick={mariadb.start}
+                      disabled={mariadb.loading}
+                      className="database-manager__btn database-manager__btn--start"
+                    >
+                      {mariadb.loading ? '⏳ Iniciando...' : '▶️ Iniciar'}
+                    </button>
+                  )}
+
+                  {mariadb.status.status === 'running' && (
+                    <button
+                      onClick={mariadb.stop}
+                      disabled={mariadb.loading}
+                      className="database-manager__btn database-manager__btn--stop"
+                    >
+                      {mariadb.loading ? '⏳ Deteniendo...' : '⏹️ Detener'}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={mariadb.uninstall}
+                    disabled={mariadb.loading}
+                    className="database-manager__btn database-manager__btn--uninstall"
+                    title="Desinstalar MariaDB del sistema"
+                  >
+                    {mariadb.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div className="database-manager__status-badge database-manager__status-badge--stopped">
+                    🔴 No instalado
+                  </div>
+                  <button
+                    onClick={mariadb.install}
+                    disabled={mariadb.loading}
+                    className="database-manager__btn database-manager__btn--install"
+                  >
+                    {mariadb.downloadProgress 
+                      ? `📥 ${mariadb.downloadProgress.phase} (${mariadb.downloadProgress.progress}%)`
+                      : mariadb.loading 
+                        ? '⏳ Instalando...' 
+                        : '📥 Instalar'
+                    }
+                  </button>
+                </>
+              )}
+              
+              <button 
+                className="database-manager__help-toggle"
+                onClick={() => setShowSystemState(!showSystemState)}
+              >
+                {showSystemState ? '▼' : '▶'}
+              </button>
+            </div>
+          </div>
         </div>
+        {showSystemState && (
+        <>
         <div className="database-manager__debug-grid">
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">Instalado:</span>
-            <span className={`database-manager__debug-value ${status?.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {status?.installed ? '✅ Sí' : '❌ No'}
+            <span className={`database-manager__debug-value ${mariadb.status?.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
+              {mariadb.status?.installed ? '✅ Sí' : '❌ No'}
             </span>
           </div>
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">Estado:</span>
             <span className={`database-manager__debug-value database-manager__debug-value--${getDebugStatusColor()}`}>
-              {status?.status || 'desconocido'}
+              {mariadb.status?.status || 'desconocido'}
             </span>
           </div>
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">API:</span>
-            <span className={`database-manager__debug-value ${status?.success ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
-              {status?.success ? '✅ Conectada' : '❌ Error'}
+            <span className={`database-manager__debug-value ${mariadb.status?.success ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
+              {mariadb.status?.success ? '✅ Conectada' : '❌ Error'}
             </span>
           </div>
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">Versión:</span>
             <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {status?.version || 'N/A'}
+              {mariadb.status?.version || 'N/A'}
             </span>
           </div>
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">Cargando:</span>
-            <span className={`database-manager__debug-value ${loading ? 'database-manager__debug-value--warning' : 'database-manager__debug-value--neutral'}`}>
-              {loading ? '⏳ Sí' : '✅ No'}
+            <span className={`database-manager__debug-value ${mariadb.loading ? 'database-manager__debug-value--warning' : 'database-manager__debug-value--neutral'}`}>
+              {mariadb.loading ? '⏳ Sí' : '✅ No'}
             </span>
           </div>
           <div className="database-manager__debug-item">
             <span className="database-manager__debug-label">Servicio:</span>
             <span className="database-manager__debug-value database-manager__debug-value--neutral">
-              {status?.serviceName || 'MariaDB'}
+              {mariadb.status?.serviceName || 'MariaDB'}
             </span>
           </div>
         </div>
-      </div>
 
-      <div className="database-manager__actions">
-        {/* Panel unificado de estado y controles */}
-        {status?.installed && (
-          <div className="database-manager__control-panel">
-            <div className="database-manager__status-section">
-              <div className="database-manager__status-card database-manager__status-card--detected">
-                <div className="database-manager__status-card-header">
-                  <h3 className="database-manager__status-card-title">
-                    ✅ MariaDB Detectado
-                  </h3>
-                  <div className={`database-manager__status-badge database-manager__status-badge--${status.status === 'running' ? 'running' : 'stopped'}`}>
-                    {status.status === 'running' ? '🟢 Ejecutándose' : '🔴 Detenido'}
-                  </div>
-                </div>
-                <div className="database-manager__status-card-content">
-                  <div className="database-manager__status-card-item">
-                    <span className="database-manager__status-card-label">Versión:</span>
-                    <span className="database-manager__status-card-value">{status.version || 'No detectada'}</span>
-                  </div>
-                  <div className="database-manager__status-card-item">
-                    <span className="database-manager__status-card-label">Servicio:</span>
-                    <span className="database-manager__status-card-value">{status.serviceName || 'MariaDB'}</span>
-                  </div>
-                </div>
+        {mariadb.info && mariadb.info.success && (
+          <div className="database-manager__info" style={{ marginTop: '0.5rem' }}>
+            <div className="database-manager__info-grid">
+              <div className="database-manager__info-item">
+                <span className="database-manager__info-label">Host:</span>
+                <span className="database-manager__info-value">{mariadb.info.host}</span>
+              </div>
+              <div className="database-manager__info-item">
+                <span className="database-manager__info-label">Puerto:</span>
+                <span className="database-manager__info-value">{mariadb.info.port}</span>
+              </div>
+              <div className="database-manager__info-item">
+                <span className="database-manager__info-label">Base de datos:</span>
+                <span className="database-manager__info-value">{mariadb.info.database}</span>
+              </div>
+              <div className="database-manager__info-item">
+                <span className="database-manager__info-label">Tiempo activo:</span>
+                <span className="database-manager__info-value">{formatUptime(mariadb.info.uptime)}</span>
               </div>
             </div>
+          </div>
+        )}
+        </>
+        )}
+      </div>
+
+      {/* Panel de PHP */}
+      <div className="database-manager__debug">
+        <div className="database-manager__debug-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h3>🐘 PHP</h3>
             
-            <div className="database-manager__controls-section">
-              <div className="database-manager__controls-grid">
-                {status.status === 'stopped' && (
-                  <button
-                    onClick={handleStart}
-                    disabled={loading}
-                    className="database-manager__btn database-manager__btn--start"
-                  >
-                    {loading ? '⏳ Iniciando...' : '▶️ Iniciar Servicio'}
-                  </button>
-                )}
-
-                {status.status === 'running' && (
-                  <button
-                    onClick={handleStop}
-                    disabled={loading}
-                    className="database-manager__btn database-manager__btn--stop"
-                  >
-                    {loading ? '⏳ Deteniendo...' : '⏹️ Detener Servicio'}
-                  </button>
-                )}
-
-                <button
-                  onClick={handleOpenHeidiSQL}
-                  disabled={loading}
-                  className="database-manager__btn database-manager__btn--heidisql"
-                >
-                  {loading ? '⏳ Abriendo...' : '🖥️ Abrir HeidiSQL'}
-                </button>
+            {/* PHP Status y botones integrados en el header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className={`database-manager__status-badge database-manager__status-badge--${php.installed ? 'running' : 'stopped'}`}>
+                {php.installed ? '🟢 Instalado' : '🔴 No instalado'}
               </div>
+              
+              {!php.installed && (
+                <button
+                  onClick={php.install}
+                  disabled={php.loading}
+                  className="database-manager__btn database-manager__btn--install"
+                >
+                  {php.loading ? '⏳ Instalando...' : '📥 Instalar'}
+                </button>
+              )}
+
+              {php.installed && (
+                <button
+                  onClick={php.uninstall}
+                  disabled={php.loading}
+                  className="database-manager__btn database-manager__btn--uninstall"
+                  title="Desinstalar PHP"
+                >
+                  {php.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
+                </button>
+              )}
+              
+              <button 
+                className="database-manager__help-toggle"
+                onClick={() => setShowPhpState(!showPhpState)}
+              >
+                {showPhpState ? '▼' : '▶'}
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Botón de instalación cuando no está instalado */}
-        {!status?.installed && (
-          <div className="database-manager__install-section">
-            <button
-              onClick={handleInstall}
-              disabled={loading}
-              className="database-manager__btn database-manager__btn--install"
-            >
-              {downloadProgress 
-                ? `📥 ${downloadProgress.phase} (${downloadProgress.progress}%)`
-                : loading 
-                  ? '⏳ Instalando...' 
-                  : '� Instalar MariaDB'
-              }
-            </button>
+        </div>
+        {showPhpState && (
+        <>
+        <div className="database-manager__debug-grid">
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Instalado:</span>
+            <span className={`database-manager__debug-value ${php.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
+              {php.installed ? '✅ Sí' : '❌ No'}
+            </span>
           </div>
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Versión:</span>
+            <span className="database-manager__debug-value database-manager__debug-value--neutral">
+              {php.version || 'N/A'}
+            </span>
+          </div>
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Path:</span>
+            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={php.path || 'N/A'}>
+              {php.path ? php.path.substring(php.path.lastIndexOf('\\') + 1) : 'N/A'}
+            </span>
+          </div>
+        </div>
+        </>
         )}
       </div>
 
-      <div className="database-manager__help">
-        <div 
-          className="database-manager__help-header"
-          onClick={() => setShowHelp(!showHelp)}
-        >
-          <h3>💡 Información</h3>
-          <button className="database-manager__help-toggle">
-            {showHelp ? '▲' : '▼'}
-          </button>
+      {/* Barra de progreso de phpMyAdmin */}
+      {phpMyAdmin.downloadProgress && (
+        <div className="database-manager__progress">
+          <div className="database-manager__progress-header">
+            <span className="database-manager__progress-text">
+              {phpMyAdmin.downloadProgress.phase}
+            </span>
+            <span className="database-manager__progress-percent">
+              {phpMyAdmin.downloadProgress.progress}%
+            </span>
+          </div>
+          <div className="database-manager__progress-bar">
+            <div 
+              className="database-manager__progress-fill"
+              style={{ width: `${phpMyAdmin.downloadProgress.progress}%` }}
+            />
+          </div>
         </div>
-        {showHelp && (
-          <ul className="database-manager__help-content">
-            <li>
-              <strong>MariaDB:</strong> Base de datos MySQL compatible con almacenamiento local
-            </li>
-            <li>
-              <strong>HeidiSQL:</strong> Interfaz visual para gestión de base de datos
-            </li>
-            <li>
-              <strong>Puerto 3306:</strong> Puerto estándar para conexiones MySQL/MariaDB
-            </li>
-            <li>
-              <strong>KokoDB:</strong> Base de datos principal de la aplicación
-            </li>
-          </ul>
+      )}
+
+      {/* Panel de phpMyAdmin */}
+      <div className="database-manager__debug">
+        <div className="database-manager__debug-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h3>🌐 phpMyAdmin</h3>
+            
+            {/* phpMyAdmin Status y botones integrados en el header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className={`database-manager__status-badge database-manager__status-badge--${phpMyAdmin.installed ? 'running' : 'stopped'}`}>
+                {phpMyAdmin.installed ? '🟢 Instalado' : '🔴 No instalado'}
+              </div>
+              
+              {!phpMyAdmin.installed && (
+                <button
+                  onClick={phpMyAdmin.install}
+                  disabled={phpMyAdmin.loading}
+                  className="database-manager__btn database-manager__btn--install"
+                >
+                  {phpMyAdmin.downloadProgress 
+                    ? `📥 ${phpMyAdmin.downloadProgress.phase} (${phpMyAdmin.downloadProgress.progress}%)`
+                    : phpMyAdmin.loading 
+                      ? '⏳ Instalando...' 
+                      : '📥 Instalar'
+                  }
+                </button>
+              )}
+
+              {phpMyAdmin.installed && (
+                <button
+                  onClick={phpMyAdmin.uninstall}
+                  disabled={phpMyAdmin.loading}
+                  className="database-manager__btn database-manager__btn--uninstall"
+                  title="Desinstalar phpMyAdmin"
+                >
+                  {phpMyAdmin.loading ? '⏳ Desinstalando...' : '🗑️ Desinstalar'}
+                </button>
+              )}
+              
+              <button 
+                className="database-manager__help-toggle"
+                onClick={() => setShowPhpMyAdminState(!showPhpMyAdminState)}
+              >
+                {showPhpMyAdminState ? '▼' : '▶'}
+              </button>
+            </div>
+          </div>
+        </div>
+        {showPhpMyAdminState && (
+        <>
+        <div className="database-manager__debug-grid">
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Instalado:</span>
+            <span className={`database-manager__debug-value ${phpMyAdmin.installed ? 'database-manager__debug-value--success' : 'database-manager__debug-value--error'}`}>
+              {phpMyAdmin.installed ? '✅ Sí' : '❌ No'}
+            </span>
+          </div>
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Versión:</span>
+            <span className="database-manager__debug-value database-manager__debug-value--neutral">
+              {phpMyAdmin.version || 'N/A'}
+            </span>
+          </div>
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Path:</span>
+            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={phpMyAdmin.path || 'N/A'}>
+              {phpMyAdmin.path ? phpMyAdmin.path.substring(phpMyAdmin.path.lastIndexOf('\\') + 1) : 'N/A'}
+            </span>
+          </div>
+          <div className="database-manager__debug-item">
+            <span className="database-manager__debug-label">Config:</span>
+            <span className="database-manager__debug-value database-manager__debug-value--neutral" title={phpMyAdmin.configPath || 'N/A'}>
+              {phpMyAdmin.configPath ? '✅ Configurado' : '❌ No configurado'}
+            </span>
+          </div>
+        </div>
+        </>
         )}
       </div>
     </div>
