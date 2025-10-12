@@ -575,6 +575,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     getStatus: () => {
       console.log('📊 [Puppeteer] Obteniendo estado');
       return ipcRenderer.invoke('puppeteer-status');
+    },
+    
+    // Mostrar navegador embebido
+    show: () => {
+      console.log('👁️ [Puppeteer] Mostrando navegador embebido');
+      return ipcRenderer.invoke('puppeteer-show');
+    },
+    
+    // Ocultar navegador embebido
+    hide: () => {
+      console.log('🙈 [Puppeteer] Ocultando navegador embebido');
+      return ipcRenderer.invoke('puppeteer-hide');
     }
   },
   

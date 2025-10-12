@@ -153,6 +153,16 @@ interface ElectronAPI {
       hasPage: boolean;
       hasBrowserView: boolean;
     }>;
+    show: () => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>;
+    hide: () => Promise<{
+      success: boolean;
+      message?: string;
+      error?: string;
+    }>;
   };
   [key: string]: any;
 }

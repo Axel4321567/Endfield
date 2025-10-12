@@ -298,12 +298,40 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     // Sistema de sesiones integrado - useTabs se encarga de la inicialización
     // No crear pestañas aquí, el hook useTabs maneja la restauración de sesiones
     console.log('📋 Sistema de pestañas con sesiones inicializado');
-    console.log('🔍 Pestañas actuales:', tabs.length);
-    
-    if (tabs.length > 0) {
-      console.log('✅ Pestañas cargadas desde sesión o creadas por defecto');
-    }
-  }, [tabs.length, createNewTab]);
+  }, [tabs.length, activeTab, navigateTab, createNewTab]);
+
+  // Auto-abrir Google cuando se detecta Electron y limpiar al desmontar
+  useEffect(() => {
+    const autoOpenBrowser = async () => {
+      if (isElectron && !isPuppeteerOpen && window.electronAPI?.puppeteerBrowser) {
+        console.log('🚀 [Koko-Web] Abriendo Google al entrar a Koko-Web...');
+        try {
+          const result = await window.electronAPI.puppeteerBrowser.open('https://www.google.com');
+          if (result.success) {
+            setIsPuppeteerOpen(true);
+            setPuppeteerUrl('https://www.google.com');
+            
+            // Mostrar el BrowserView
+            await window.electronAPI.puppeteerBrowser.show();
+            console.log('✅ [Koko-Web] Google abierto correctamente');
+          }
+        } catch (error) {
+          console.error('❌ [Koko-Web] Error:', error);
+        }
+      }
+    };
+
+    autoOpenBrowser();
+
+    // Cleanup: Ocultar BrowserView cuando el componente se desmonta
+    return () => {
+      if (isElectron && window.electronAPI?.puppeteerBrowser) {
+        window.electronAPI.puppeteerBrowser.hide()
+          .then(() => console.log('🙈 [Koko-Web] BrowserView oculto al salir de Koko-Web'))
+          .catch((error: Error) => console.warn('⚠️ [Koko-Web] Error ocultando BrowserView:', error));
+      }
+    };
+  }, [isElectron]); // Se ejecuta cuando isElectron cambia a true
 
   // Efecto para actualizar iframe cuando cambia la URL de la pestaña activa
   useEffect(() => {
@@ -386,6 +414,11 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
         console.log('✅ [Puppeteer] URL abierta:', url);
         setIsPuppeteerOpen(true);
         setPuppeteerUrl(url);
+        
+        // Mostrar el BrowserView inmediatamente después de abrirlo
+        await window.electronAPI.puppeteerBrowser.show();
+        console.log('👁️ [Puppeteer] BrowserView mostrado');
+        
         return true;
       } else {
         console.error('❌ [Puppeteer] Error:', result.error);
@@ -705,46 +738,6 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     });
   };
 
-  const renderWebContent = () => {
-    // Mostrar indicador del navegador embebido
-    if (isPuppeteerOpen) {
-      return (
-        <div className="puppeteer-active-indicator">
-          <div className="puppeteer-indicator-content">
-            <div className="puppeteer-icon-large">🎭</div>
-            <h2>Navegador Embebido Activo</h2>
-            <p className="puppeteer-current-url">Navegando en: <strong>{puppeteerUrl}</strong></p>
-            <p className="puppeteer-description">
-              El contenido se está mostrando en la ventana embebida arriba.
-              <br />
-              Usa el panel de control para navegar a otras URLs.
-            </p>
-            <button 
-              className="puppeteer-close-btn-large"
-              onClick={closePuppeteerBrowser}
-            >
-              🔴 Cerrar Navegador
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    // Mensaje inicial
-    return (
-      <div className="no-active-tab">
-        <div className="welcome-message">
-          <div className="chromium-icon">🎭</div>
-          <h2>Navegador Puppeteer Embebido</h2>
-          <p>Usa el panel de control superior para abrir páginas web</p>
-          <p className="puppeteer-hint">
-            Ingresa una URL en el campo superior y haz clic en "🚀 Abrir"
-          </p>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="simple-koko-web">
 
@@ -823,8 +816,6 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
             </div>
           </div>
         )}
-        
-        {renderWebContent()}
       </div>
 
       {showBookmarkManager && (

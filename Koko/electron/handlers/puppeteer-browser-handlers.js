@@ -84,9 +84,10 @@ function createOrUpdateBrowserView(url) {
       }
     });
   
-  mainWindow.addBrowserView(currentBrowserView);
+  // NO agregar automáticamente a la ventana, esperar a que se llame show()
+  // mainWindow.addBrowserView(currentBrowserView);
   
-  console.log('🛡️ [BrowserView] Usando sesión webview con anti-detección pre-configurada');
+  console.log('🛡️ [BrowserView] Creado con sesión webview anti-detección (no visible hasta show())');
   
   // Calcular dimensiones dinámicamente desde el DOM
   const updateBounds = () => {
@@ -273,6 +274,68 @@ export function registerPuppeteerBrowserHandlers(window) {
       hasPage: !!currentBrowserView,
       hasBrowserView: !!currentBrowserView
     };
+  });
+  
+  // Mostrar BrowserView
+  ipcMain.handle('puppeteer-show', async () => {
+    try {
+      if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+        // Agregar el BrowserView a la ventana
+        mainWindow.addBrowserView(currentBrowserView);
+        
+        // Actualizar bounds para posicionarlo correctamente
+        try {
+          const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
+            (() => {
+              const sidebar = document.querySelector('.sidebar-container');
+              const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+              const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+              const headerHeight = header ? header.offsetHeight : 60;
+              return { sidebarWidth, headerHeight };
+            })()
+          `);
+          
+          const bounds = mainWindow.getContentBounds();
+          currentBrowserView.setBounds({
+            x: sidebarWidth,
+            y: headerHeight,
+            width: bounds.width - sidebarWidth,
+            height: bounds.height - headerHeight
+          });
+        } catch (error) {
+          // Fallback con dimensiones por defecto
+          const bounds = mainWindow.getContentBounds();
+          currentBrowserView.setBounds({
+            x: 280,
+            y: 60,
+            width: bounds.width - 280,
+            height: bounds.height - 60
+          });
+        }
+        
+        console.log('👁️ [BrowserView] Mostrando navegador');
+        return { success: true };
+      }
+      return { success: false, message: 'No hay BrowserView activo' };
+    } catch (error) {
+      console.error('❌ [BrowserView] Error al mostrar:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Ocultar BrowserView
+  ipcMain.handle('puppeteer-hide', async () => {
+    try {
+      if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.removeBrowserView(currentBrowserView);
+        console.log('🙈 [BrowserView] Ocultando navegador');
+        return { success: true };
+      }
+      return { success: false, message: 'No hay BrowserView activo' };
+    } catch (error) {
+      console.error('❌ [BrowserView] Error al ocultar:', error);
+      return { success: false, error: error.message };
+    }
   });
   
   // Handler para notificar cambios en el sidebar (con animación suave)
