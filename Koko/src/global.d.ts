@@ -152,6 +152,7 @@ interface ElectronAPI {
       isOpen: boolean;
       hasPage: boolean;
       hasBrowserView: boolean;
+      currentUrl?: string | null;
     }>;
     show: () => Promise<{
       success: boolean;

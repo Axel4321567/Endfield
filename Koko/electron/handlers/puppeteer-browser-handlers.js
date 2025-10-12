@@ -274,11 +274,23 @@ export function registerPuppeteerBrowserHandlers(window) {
   
   // Obtener estado
   ipcMain.handle('puppeteer-status', async () => {
+    let currentUrl = null;
+    
+    // Obtener URL actual del BrowserView si existe
+    if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
+      try {
+        currentUrl = currentBrowserView.webContents.getURL();
+      } catch (error) {
+        console.warn('⚠️ [BrowserView] No se pudo obtener URL actual:', error.message);
+      }
+    }
+    
     return {
       success: true,
       isOpen: !!currentBrowserView,
       hasPage: !!currentBrowserView,
-      hasBrowserView: !!currentBrowserView
+      hasBrowserView: !!currentBrowserView,
+      currentUrl
     };
   });
   
@@ -289,33 +301,48 @@ export function registerPuppeteerBrowserHandlers(window) {
         // Agregar el BrowserView a la ventana
         mainWindow.addBrowserView(currentBrowserView);
         
-        // Actualizar bounds para posicionarlo correctamente
+        // Actualizar bounds para posicionarlo correctamente (INCLUIR TABS + CONTROL PANEL)
         try {
-          const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
+          const { sidebarWidth, totalHeaderHeight } = await mainWindow.webContents.executeJavaScript(`
             (() => {
               const sidebar = document.querySelector('.sidebar-container');
-              const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+              const tabBar = document.querySelector('.tab-bar');
+              const controlPanel = document.querySelector('.puppeteer-control-panel');
+              
               const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
-              const headerHeight = header ? header.offsetHeight : 60;
-              return { sidebarWidth, headerHeight };
+              const tabBarHeight = tabBar ? tabBar.offsetHeight : 48;
+              const controlPanelHeight = controlPanel ? controlPanel.offsetHeight : 60;
+              const totalHeaderHeight = tabBarHeight + controlPanelHeight;
+              
+              console.log('📐 [Show] Detectado:', {
+                tabBarHeight,
+                controlPanelHeight,
+                totalHeaderHeight
+              });
+              
+              return { sidebarWidth, totalHeaderHeight };
             })()
           `);
           
           const bounds = mainWindow.getContentBounds();
-          currentBrowserView.setBounds({
+          const boundsConfig = {
             x: sidebarWidth,
-            y: headerHeight,
+            y: totalHeaderHeight,
             width: bounds.width - sidebarWidth,
-            height: bounds.height - headerHeight
-          });
+            height: bounds.height - totalHeaderHeight
+          };
+          
+          console.log('🔧 [BrowserView] Aplicando bounds al mostrar:', boundsConfig);
+          currentBrowserView.setBounds(boundsConfig);
         } catch (error) {
-          // Fallback con dimensiones por defecto
+          console.warn('⚠️ [BrowserView] Error detectando elementos, usando fallback');
+          // Fallback: TabBar (48px) + Control Panel (60px) = 108px
           const bounds = mainWindow.getContentBounds();
           currentBrowserView.setBounds({
             x: 280,
-            y: 60,
+            y: 108,
             width: bounds.width - 280,
-            height: bounds.height - 60
+            height: bounds.height - 108
           });
         }
         

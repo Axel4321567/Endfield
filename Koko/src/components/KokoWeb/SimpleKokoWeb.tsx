@@ -301,34 +301,53 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     console.log('📋 Sistema de pestañas con sesiones inicializado');
   }, [tabs.length, activeTab, navigateTab, createNewTab]);
 
-  // Auto-abrir Google cuando se detecta Electron y limpiar al desmontar
+  // Sistema de sesión persistente - BrowserView permanece activo en segundo plano
   useEffect(() => {
-    const autoOpenBrowser = async () => {
-      if (isElectron && !isPuppeteerOpen && window.electronAPI?.puppeteerBrowser) {
-        console.log('🚀 [Koko-Web] Abriendo Google al entrar a Koko-Web...');
-        try {
+    const initializeBrowserView = async () => {
+      if (!isElectron || !window.electronAPI?.puppeteerBrowser) return;
+
+      console.log('🎬 [Koko-Web] Inicializando BrowserView...');
+      
+      try {
+        // Verificar si ya existe un BrowserView activo
+        const status = await window.electronAPI.puppeteerBrowser.getStatus();
+        
+        if (status.isOpen) {
+          // Ya existe, solo mostrarlo y obtener URL actual
+          console.log('♻️ [Koko-Web] BrowserView existente detectado, restaurando...');
+          await window.electronAPI.puppeteerBrowser.show();
+          setIsPuppeteerOpen(true);
+          
+          // Obtener URL actual del BrowserView
+          if (status.currentUrl) {
+            setPuppeteerUrl(status.currentUrl);
+            console.log('✅ [Koko-Web] Sesión restaurada:', status.currentUrl);
+          }
+        } else {
+          // No existe, crear uno nuevo con Google
+          console.log('🚀 [Koko-Web] Creando nuevo BrowserView con Google...');
           const result = await window.electronAPI.puppeteerBrowser.open('https://www.google.com');
+          
           if (result.success) {
             setIsPuppeteerOpen(true);
             setPuppeteerUrl('https://www.google.com');
-            
-            // Mostrar el BrowserView
             await window.electronAPI.puppeteerBrowser.show();
             console.log('✅ [Koko-Web] Google abierto correctamente');
           }
-        } catch (error) {
-          console.error('❌ [Koko-Web] Error:', error);
         }
+      } catch (error) {
+        console.error('❌ [Koko-Web] Error inicializando:', error);
       }
     };
 
-    autoOpenBrowser();
+    initializeBrowserView();
 
-    // Cleanup: Ocultar BrowserView cuando el componente se desmonta
+    // Cleanup: SOLO ocultar (NO cerrar) para mantener sesión activa
+    // Esto permite que la música/videos sigan reproduciéndose en segundo plano
     return () => {
       if (isElectron && window.electronAPI?.puppeteerBrowser) {
         window.electronAPI.puppeteerBrowser.hide()
-          .then(() => console.log('🙈 [Koko-Web] BrowserView oculto al salir de Koko-Web'))
+          .then(() => console.log('🎵 [Koko-Web] BrowserView oculto (sigue activo en segundo plano)'))
           .catch((error: Error) => console.warn('⚠️ [Koko-Web] Error ocultando BrowserView:', error));
       }
     };
