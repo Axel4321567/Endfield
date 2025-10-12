@@ -75,12 +75,8 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
   // Notificar a Electron cuando cambie el estado del sidebar
   useEffect(() => {
     if (window.electronAPI?.app?.notifySidebarChange) {
-      // Esperar a que la animación CSS termine (300ms)
-      const timer = setTimeout(() => {
-        window.electronAPI.app.notifySidebarChange();
-      }, 350);
-      
-      return () => clearTimeout(timer);
+      // Iniciar la animación inmediatamente para mejor sincronización
+      window.electronAPI.app.notifySidebarChange();
     }
   }, [isCollapsed]);
   

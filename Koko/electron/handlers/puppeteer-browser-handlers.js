@@ -13,6 +13,12 @@ let puppeteerBrowser = null;
 let puppeteerPage = null;
 let currentBrowserView = null;
 let mainWindow = null;
+let resizeTimeout = null;
+let resizeRAF = null;
+
+// Polyfill para requestAnimationFrame en Node.js
+const requestAnimationFrame = global.requestAnimationFrame || setImmediate;
+const cancelAnimationFrame = global.cancelAnimationFrame || clearImmediate;
 
 /**
  * [DESHABILITADO] Obtener ruta del ejecutable de Chromium
@@ -269,7 +275,7 @@ export function registerPuppeteerBrowserHandlers(window) {
     };
   });
   
-  // Handler para notificar cambios en el sidebar
+  // Handler para notificar cambios en el sidebar (con animación suave)
   ipcMain.handle('notify-sidebar-change', async () => {
     console.log('🔔 [Sidebar] Cambio detectado, actualizando BrowserView...');
     
@@ -278,47 +284,22 @@ export function registerPuppeteerBrowserHandlers(window) {
     }
     
     try {
-      const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
-        (() => {
-          const sidebar = document.querySelector('.sidebar-container');
-          const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
-          const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
-          const headerHeight = header ? header.offsetHeight : 60;
-          return { sidebarWidth, headerHeight };
-        })()
-      `);
+      // Múltiples actualizaciones durante la animación CSS (300ms)
+      const updateFrames = [0, 50, 100, 150, 200, 250, 300];
       
-      const bounds = mainWindow.getContentBounds();
-      currentBrowserView.setBounds({
-        x: sidebarWidth,
-        y: headerHeight,
-        width: bounds.width - sidebarWidth,
-        height: bounds.height - headerHeight
-      });
-      
-      console.log('✅ [Sidebar] BrowserView actualizado:', { sidebarWidth, headerHeight });
-      return { success: true };
-    } catch (error) {
-      console.error('❌ [Sidebar] Error actualizando BrowserView:', error);
-      return { success: false, error: error.message };
-    }
-  });
-  
-  // Redimensionar BrowserView al redimensionar ventana
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    // Handler para resize de ventana
-    mainWindow.on('resize', () => {
-      try {
-        if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.executeJavaScript(`
-            (() => {
-              const sidebar = document.querySelector('.sidebar-container');
-              const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
-              const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
-              const headerHeight = header ? header.offsetHeight : 60;
-              return { sidebarWidth, headerHeight };
-            })()
-          `).then(({ sidebarWidth, headerHeight }) => {
+      for (const delay of updateFrames) {
+        setTimeout(async () => {
+          try {
+            const { sidebarWidth, headerHeight } = await mainWindow.webContents.executeJavaScript(`
+              (() => {
+                const sidebar = document.querySelector('.sidebar-container');
+                const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+                const headerHeight = header ? header.offsetHeight : 60;
+                return { sidebarWidth, headerHeight };
+              })()
+            `);
+            
             if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
               const bounds = mainWindow.getContentBounds();
               currentBrowserView.setBounds({
@@ -328,21 +309,80 @@ export function registerPuppeteerBrowserHandlers(window) {
                 height: bounds.height - headerHeight
               });
             }
-          }).catch((error) => {
-            if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
-              const bounds = mainWindow.getContentBounds();
-              currentBrowserView.setBounds({
-                x: 280,
-                y: 60,
-                width: bounds.width - 280,
-                height: bounds.height - 60
-              });
-            }
-          });
-        }
-      } catch (error) {
-        console.warn('⚠️ [BrowserView] Error en resize:', error.message);
+          } catch (error) {
+            // Ignorar errores en frames intermedios
+          }
+        }, delay);
       }
+      
+      console.log('✅ [Sidebar] BrowserView actualizándose con animación suave');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ [Sidebar] Error actualizando BrowserView:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Redimensionar BrowserView al redimensionar ventana (con debouncing y RAF)
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    // Función optimizada de resize con debouncing y RequestAnimationFrame
+    const smoothResize = () => {
+      // Cancelar resize anterior si existe
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+      if (resizeRAF) {
+        cancelAnimationFrame(resizeRAF);
+      }
+      
+      // Usar RAF para sincronizar con el repintado del navegador
+      resizeRAF = requestAnimationFrame(() => {
+        try {
+          if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.executeJavaScript(`
+              (() => {
+                const sidebar = document.querySelector('.sidebar-container');
+                const header = document.querySelector('.puppeteer-control-panel, [class*="control-panel"]');
+                const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+                const headerHeight = header ? header.offsetHeight : 60;
+                return { sidebarWidth, headerHeight };
+              })()
+            `).then(({ sidebarWidth, headerHeight }) => {
+              if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
+                const bounds = mainWindow.getContentBounds();
+                currentBrowserView.setBounds({
+                  x: sidebarWidth,
+                  y: headerHeight,
+                  width: bounds.width - sidebarWidth,
+                  height: bounds.height - headerHeight
+                });
+              }
+            }).catch((error) => {
+              if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
+                const bounds = mainWindow.getContentBounds();
+                currentBrowserView.setBounds({
+                  x: 280,
+                  y: 60,
+                  width: bounds.width - 280,
+                  height: bounds.height - 60
+                });
+              }
+            });
+          }
+        } catch (error) {
+          console.warn('⚠️ [BrowserView] Error en resize:', error.message);
+        }
+      });
+    };
+    
+    // Handler para resize de ventana con debouncing ligero
+    mainWindow.on('resize', () => {
+      smoothResize();
+      
+      // Debouncing adicional para el resize final (cuando usuario suelta)
+      resizeTimeout = setTimeout(() => {
+        smoothResize();
+      }, 100);
     });
     
     // Observer para detectar cambios en el sidebar (colapsar/expandir)
