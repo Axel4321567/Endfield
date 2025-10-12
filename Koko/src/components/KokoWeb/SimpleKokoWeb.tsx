@@ -769,24 +769,6 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
               }}
               disabled={isPuppeteerLoading}
             />
-            <button
-              className="puppeteer-open-btn"
-              onClick={() => openInPuppeteerBrowser(puppeteerUrl)}
-              disabled={isPuppeteerLoading}
-            >
-              {isPuppeteerLoading ? '⏳ Cargando...' : '🚀 Abrir'}
-            </button>
-            {isPuppeteerOpen && (
-              <button
-                className="puppeteer-close-btn"
-                onClick={closePuppeteerBrowser}
-              >
-                🔴 Cerrar
-              </button>
-            )}
-            <span className="puppeteer-status">
-              {isPuppeteerOpen ? '🟢 Activo' : '⚪ Inactivo'}
-            </span>
           </div>
         </div>
       )}
