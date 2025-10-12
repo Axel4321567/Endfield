@@ -28,6 +28,10 @@ import { registerPhpMyAdminHandlers, initializePhpMyAdminManager } from './handl
 import { registerDatabaseServiceHandlers } from './handlers/database-service-handlers.js';
 import { registerPasswordManagerHandlers } from './handlers/password-manager-handlers.js';
 import { registerCredentialCaptureHandlers } from './handlers/credential-capture-handlers.js';
+import { registerSearchProxyHandlers } from './handlers/search-proxy-handlers.js';
+import { registerSearchProxyServiceHandlers, cleanupSearchProxy } from './handlers/search-proxy-service-handlers.js';
+import { registerChromiumHandlers, cleanupChromium } from './handlers/chromium-handlers.js';
+import { registerPuppeteerBrowserHandlers, cleanupPuppeteerBrowser } from './handlers/puppeteer-browser-handlers.js';
 
 // Importar phpMyAdmin Manager
 import PhpMyAdminManager from './automation/phpmyadmin-manager.js';
@@ -75,7 +79,7 @@ app.whenReady().then(async () => {
   console.log('🎥 Funcionalidades multimedia habilitadas');
   
   // Crear ventana principal
-  await createWindow();
+  const mainWindow = await createWindow();
   
   // Crear menú de aplicación
   createApplicationMenu();
@@ -89,6 +93,10 @@ app.whenReady().then(async () => {
   registerDatabaseServiceHandlers();
   registerPasswordManagerHandlers();
   registerCredentialCaptureHandlers();
+  registerSearchProxyHandlers(mainWindow); // 🔍 Handlers para búsqueda segura con BrowserView
+  registerSearchProxyServiceHandlers(); // 🔍 Handlers para gestionar el servicio del proxy
+  // registerChromiumHandlers(); // 🌐 [DESHABILITADO] Handlers para gestionar Chromium
+  registerPuppeteerBrowserHandlers(mainWindow); // 🎭 Handlers para navegador Puppeteer embebido
   
   // Inicializar phpMyAdmin Manager
   phpMyAdminManager = new PhpMyAdminManager();
@@ -194,6 +202,15 @@ function createApplicationMenu() {
 app.on('window-all-closed', () => {
   // Limpiar atajos de teclado
   globalShortcut.unregisterAll();
+  
+  // Limpiar Search Proxy al cerrar
+  cleanupSearchProxy();
+  
+  // Limpiar Chromium al cerrar
+  cleanupChromium();
+  
+  // Limpiar Puppeteer al cerrar
+  cleanupPuppeteerBrowser();
   
   if (process.platform !== 'darwin') {
     app.quit();
