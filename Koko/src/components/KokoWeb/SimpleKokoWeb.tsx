@@ -38,6 +38,10 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
   const [isSearching, setIsSearching] = useState(false);
   const [loadingTimeouts, setLoadingTimeouts] = useState<Map<string, number>>(new Map());
   const [isProxyAvailable, setIsProxyAvailable] = useState<boolean | null>(null); // null = checking
+  
+  // Refs para control de carga de sesión (persiste entre montajes)
+  const sessionLoadedRef = useRef(false);
+  const isLoadingSessionRef = useRef(false);
 
   // Función para detectar si una consulta es una búsqueda (SOLO para input directo del usuario)
   const isSearchQuery = (input: string): boolean => {
@@ -301,43 +305,152 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     console.log('📋 Sistema de pestañas con sesiones inicializado');
   }, [tabs.length, activeTab, navigateTab, createNewTab]);
 
+  // 💾 Cargar sesión guardada al iniciar (solo una vez, persiste entre montajes)
+  useEffect(() => {
+    const loadSavedSession = async () => {
+      if (!isElectron || !window.electronAPI?.puppeteerBrowser) return;
+      
+      // Solo cargar una vez - useRef persiste entre montajes del componente
+      if (sessionLoadedRef.current) {
+        console.log('⏭️ [Session] Ya se cargó la sesión anteriormente, saltando...');
+        return;
+      }
+      
+      // Si ya hay tabs, no cargar la sesión (significa que el componente se remontó)
+      if (tabs.length > 0) {
+        console.log('⏭️ [Session] Ya hay tabs activas, marcando sesión como cargada');
+        sessionLoadedRef.current = true;
+        return;
+      }
+      
+      console.log('📂 [Session] Cargando sesión guardada...');
+      
+      // Marcar que estamos cargando sesión para evitar auto-guardados
+      isLoadingSessionRef.current = true;
+      
+      try {
+        const result = await window.electronAPI.puppeteerBrowser.sessionLoad();
+        
+        if (result.success && result.session && result.session.tabs.length > 0) {
+          console.log('✅ [Session] Sesión encontrada:', result.session.tabs.length, 'tabs');
+          
+          // Mapeo para guardar los nuevos IDs
+          const tabMapping = new Map(); // oldTabId -> newTabId
+          
+          // Recrear tabs desde la sesión
+          for (const savedTab of result.session.tabs) {
+            console.log('🔄 [Session] Restaurando tab:', savedTab.title, savedTab.url);
+            const newTabId = createNewTab(savedTab.url, savedTab.title);
+            tabMapping.set(savedTab.tabId, newTabId);
+          }
+          
+          // Esperar un momento para que React actualice las tabs
+          setTimeout(async () => {
+            // Restaurar tab activa usando el mapeo
+            if (result.session?.activeTabId) {
+              const newActiveTabId = tabMapping.get(result.session.activeTabId);
+              if (newActiveTabId) {
+                console.log('🔄 [Session] Restaurando tab activa:', newActiveTabId);
+                switchTab(newActiveTabId);
+                
+                // Obtener la tab recién creada para navegar a su URL
+                const restoredTab = result.session.tabs.find(t => t.tabId === result.session.activeTabId);
+                if (restoredTab) {
+                  console.log('🌐 [Session] Navegando a URL de tab activa:', restoredTab.url);
+                  
+                  // Esperar un poco más para que switchTab actualice el estado
+                  setTimeout(async () => {
+                    try {
+                      // Navegar el BrowserView a la URL guardada
+                      await window.electronAPI.puppeteerBrowser.tabNavigate(newActiveTabId, restoredTab.url);
+                      await window.electronAPI.puppeteerBrowser.tabSwitch(newActiveTabId);
+                      
+                      // Marcar como abierto y actualizar URL
+                      setIsPuppeteerOpen(true);
+                      setPuppeteerUrl(restoredTab.url);
+                      
+                      console.log('✅ [Session] BrowserView mostrado con URL:', restoredTab.url);
+                    } catch (error) {
+                      console.error('❌ [Session] Error mostrando BrowserView:', error);
+                    }
+                    
+                    // Marcar carga completa DESPUÉS de todo
+                    isLoadingSessionRef.current = false;
+                    console.log('✅ [Session] Sesión restaurada exitosamente');
+                  }, 300);
+                }
+              }
+            } else {
+              // Si no hay tab activa, marcar como completo de todos modos
+              isLoadingSessionRef.current = false;
+            }
+          }, 800); // Aumentar a 800ms para dar más tiempo
+          
+          sessionLoadedRef.current = true;
+        } else {
+          console.log('📂 [Session] No hay sesión guardada o está vacía, creando tab por defecto');
+          // Crear tab por defecto si no hay sesión
+          createNewTab('https://www.google.com', 'Google');
+          isLoadingSessionRef.current = false;
+          sessionLoadedRef.current = true;
+        }
+      } catch (error) {
+        console.error('❌ [Session] Error cargando sesión:', error);
+        isLoadingSessionRef.current = false;
+        sessionLoadedRef.current = true;
+      }
+    };
+    
+    loadSavedSession();
+  }, [isElectron, tabs.length]); // Depende de isElectron y cantidad de tabs
+
+  // 💾 Auto-guardar sesión periódicamente y antes de cerrar
+  useEffect(() => {
+    if (!isElectron || !window.electronAPI?.puppeteerBrowser) return;
+    
+    // Guardar cada 30 segundos
+    const saveInterval = setInterval(() => {
+      if (tabs.length > 0) {
+        console.log('💾 [Session] Auto-guardado periódico...');
+        window.electronAPI.puppeteerBrowser.sessionSave();
+      }
+    }, 30000);
+    
+    // Guardar antes de cerrar la ventana
+    const handleBeforeUnload = () => {
+      if (tabs.length > 0) {
+        console.log('💾 [Session] Guardando antes de cerrar...');
+        window.electronAPI?.puppeteerBrowser?.sessionSave();
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      clearInterval(saveInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Guardar una última vez al desmontar
+      if (tabs.length > 0) {
+        window.electronAPI?.puppeteerBrowser?.sessionSave();
+      }
+    };
+  }, [isElectron, tabs.length]);
+
   // Sistema de sesión persistente - BrowserView permanece activo en segundo plano
   useEffect(() => {
     const initializeBrowserView = async () => {
       if (!isElectron || !window.electronAPI?.puppeteerBrowser) return;
-
-      console.log('🎬 [Koko-Web] Inicializando BrowserView...');
       
-      try {
-        // Verificar si ya existe un BrowserView activo
-        const status = await window.electronAPI.puppeteerBrowser.getStatus();
-        
-        if (status.isOpen) {
-          // Ya existe, solo mostrarlo y obtener URL actual
-          console.log('♻️ [Koko-Web] BrowserView existente detectado, restaurando...');
-          await window.electronAPI.puppeteerBrowser.show();
-          setIsPuppeteerOpen(true);
-          
-          // Obtener URL actual del BrowserView
-          if (status.currentUrl) {
-            setPuppeteerUrl(status.currentUrl);
-            console.log('✅ [Koko-Web] Sesión restaurada:', status.currentUrl);
-          }
-        } else {
-          // No existe, crear uno nuevo con Google
-          console.log('🚀 [Koko-Web] Creando nuevo BrowserView con Google...');
-          const result = await window.electronAPI.puppeteerBrowser.open('https://www.google.com');
-          
-          if (result.success) {
-            setIsPuppeteerOpen(true);
-            setPuppeteerUrl('https://www.google.com');
-            await window.electronAPI.puppeteerBrowser.show();
-            console.log('✅ [Koko-Web] Google abierto correctamente');
-          }
-        }
-      } catch (error) {
-        console.error('❌ [Koko-Web] Error inicializando:', error);
+      // Si hay tabs, significa que ya se cargó la sesión o el usuario tiene tabs activas
+      if (tabs.length > 0 && activeTab) {
+        console.log('🎬 [Koko-Web] Mostrando BrowserView con tab activa:', activeTab.id);
+        setIsPuppeteerOpen(true);
+        setPuppeteerUrl(activeTab.url);
+        return;
       }
+
+      console.log('🎬 [Koko-Web] Sin tabs, esperando carga de sesión...');
     };
 
     initializeBrowserView();
@@ -351,12 +464,18 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
           .catch((error: Error) => console.warn('⚠️ [Koko-Web] Error ocultando BrowserView:', error));
       }
     };
-  }, [isElectron]); // Se ejecuta cuando isElectron cambia a true
+  }, [isElectron, tabs.length, activeTab]); // Se ejecuta cuando cambian tabs
 
   // 🔗 Sincronizar BrowserView con tab activa (nuevo sistema de múltiples BrowserViews)
   useEffect(() => {
     const syncBrowserViewWithTab = async () => {
       if (!isElectron || !activeTab || !window.electronAPI?.puppeteerBrowser) {
+        return;
+      }
+
+      // No sincronizar si estamos cargando la sesión
+      if (isLoadingSessionRef.current) {
+        console.log('⏭️ [Tab Sync] Saltando sincronización - cargando sesión');
         return;
       }
 

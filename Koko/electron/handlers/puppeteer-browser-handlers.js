@@ -1,7 +1,8 @@
-import { ipcMain, BrowserView, session } from 'electron';
+import { ipcMain, BrowserView, session, app } from 'electron';
 import puppeteer from 'puppeteer-core';
 import path from 'path';
 import { readdirSync, existsSync } from 'fs';
+import * as BrowserSessionService from '../services/browser-session-service.js';
 
 /**
  * 🎭 Handlers para navegador Puppeteer embebido
@@ -223,6 +224,12 @@ function getOrCreateBrowserViewForTab(tabId, url) {
   // Cargar URL
   browserView.webContents.loadURL(url);
   
+  // Listener para guardar sesión cuando termine de cargar
+  browserView.webContents.on('did-finish-load', () => {
+    // Auto-guardar sesión después de cargar página
+    setTimeout(() => saveBrowserSession(), 500);
+  });
+  
   // Guardar en el pool
   browserViewPool.set(tabId, browserView);
   console.log('✅ [BrowserView Pool] BrowserView creado y almacenado. Total en pool:', browserViewPool.size);
@@ -265,6 +272,9 @@ function switchToTab(tabId) {
   activeTabId = tabId;
   currentBrowserView = browserView;
   
+  // Auto-guardar sesión
+  saveBrowserSession();
+  
   console.log('✅ [Tab Switch] Tab cambiada exitosamente a:', tabId);
 }
 
@@ -291,6 +301,9 @@ function closeBrowserViewForTab(tabId) {
       // Remover del pool
       browserViewPool.delete(tabId);
       console.log('✅ [BrowserView Pool] BrowserView cerrado. Total en pool:', browserViewPool.size);
+      
+      // Auto-guardar sesión después de cerrar
+      saveBrowserSession();
     } catch (error) {
       console.error('❌ [BrowserView Pool] Error al cerrar:', error.message);
     }
@@ -338,6 +351,77 @@ function updateBoundsForBrowserView(browserView) {
       height: bounds.height - 108
     });
   });
+}
+
+/**
+ * 💾 Guardar sesión de tabs en base de datos
+ */
+async function saveBrowserSession() {
+  try {
+    const tabs = [];
+    
+    // Recopilar información de cada tab
+    browserViewPool.forEach((browserView, tabId) => {
+      if (!browserView.webContents.isDestroyed()) {
+        const url = browserView.webContents.getURL();
+        const title = browserView.webContents.getTitle();
+        
+        tabs.push({
+          tabId,
+          url,
+          title
+        });
+      }
+    });
+    
+    // Guardar en base de datos
+    const result = await BrowserSessionService.saveBrowserSession(activeTabId, tabs);
+    
+    if (result.success) {
+      console.log('💾 [Session DB] Sesión guardada:', tabs.length, 'tabs');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ [Session DB] Error guardando sesión:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 📂 Cargar sesión de tabs desde base de datos
+ */
+async function loadBrowserSession() {
+  try {
+    const result = await BrowserSessionService.loadBrowserSession();
+    
+    if (result.success && result.session) {
+      console.log('📂 [Session DB] Sesión cargada:', result.session.tabs?.length || 0, 'tabs');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ [Session DB] Error cargando sesión:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * 🗑️ Limpiar sesión guardada de base de datos
+ */
+async function clearBrowserSession() {
+  try {
+    const result = await BrowserSessionService.clearBrowserSession();
+    
+    if (result.success) {
+      console.log('🗑️ [Session DB] Sesión limpiada');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ [Session DB] Error limpiando sesión:', error);
+    return { success: false, error: error.message };
+  }
 }
 
 /**
@@ -756,7 +840,24 @@ export function registerPuppeteerBrowserHandlers(window) {
     }
   });
   
-  console.log('✅ [Puppeteer] Handlers registrados correctamente (incluyendo sistema de tabs)');
+  // 💾 Handlers para persistencia de sesiones
+  
+  // Guardar sesión actual
+  ipcMain.handle('puppeteer-session-save', async () => {
+    return saveBrowserSession();
+  });
+  
+  // Cargar sesión guardada
+  ipcMain.handle('puppeteer-session-load', async () => {
+    return loadBrowserSession();
+  });
+  
+  // Limpiar sesión guardada
+  ipcMain.handle('puppeteer-session-clear', async () => {
+    return clearBrowserSession();
+  });
+  
+  console.log('✅ [Puppeteer] Handlers registrados correctamente (incluyendo sistema de tabs y sesiones)');
 }
 
 /**
@@ -764,5 +865,15 @@ export function registerPuppeteerBrowserHandlers(window) {
  */
 export async function cleanupPuppeteerBrowser() {
   console.log('🧹 [Puppeteer] Limpiando recursos...');
+  
+  // 💾 Guardar sesión antes de cerrar
+  try {
+    console.log('💾 [Puppeteer] Guardando sesión antes de cerrar...');
+    await saveBrowserSession();
+    console.log('✅ [Puppeteer] Sesión guardada exitosamente');
+  } catch (error) {
+    console.error('❌ [Puppeteer] Error guardando sesión al cerrar:', error);
+  }
+  
   await closePuppeteerBrowser();
 }

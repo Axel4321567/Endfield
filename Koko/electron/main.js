@@ -39,6 +39,7 @@ import PhpMyAdminManager from './automation/phpmyadmin-manager.js';
 // Importar Services
 import DatabaseService from './services/database-service.js';
 import PasswordManagerService from './services/auth/password-manager-service.js';
+import * as BrowserSessionService from './services/browser-session-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -114,6 +115,14 @@ app.whenReady().then(async () => {
     console.log('✅ [PasswordManager] Tablas inicializadas');
   } catch (error) {
     console.error('❌ [PasswordManager] Error inicializando:', error);
+  }
+  
+  // Inicializar Browser Session Service (crear tablas si no existen)
+  try {
+    await BrowserSessionService.initializeBrowserSessionTable();
+    console.log('✅ [BrowserSession] Tablas inicializadas');
+  } catch (error) {
+    console.error('❌ [BrowserSession] Error inicializando:', error);
   }
   
   // Configurar auto-updater

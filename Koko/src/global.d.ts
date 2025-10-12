@@ -188,6 +188,28 @@ interface ElectronAPI {
       url?: string | null;
       error?: string;
     }>;
+    // 💾 Sistema de persistencia de sesiones
+    sessionSave: () => Promise<{
+      success: boolean;
+      tabs?: number;
+      error?: string;
+    }>;
+    sessionLoad: () => Promise<{
+      success: boolean;
+      session?: {
+        activeTabId: string | null;
+        tabs: Array<{
+          tabId: string;
+          url: string;
+          title: string;
+        }>;
+      } | null;
+      error?: string;
+    }>;
+    sessionClear: () => Promise<{
+      success: boolean;
+      error?: string;
+    }>;
   };
   [key: string]: any;
 }

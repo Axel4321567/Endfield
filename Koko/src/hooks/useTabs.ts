@@ -17,27 +17,11 @@ export const useTabs = (): TabsManager => {
   });
   const [isSessionRestored, setIsSessionRestored] = useState(false);
 
-  // Inicialización simple sin sesiones - evitar bucles  
+  // Inicialización simple sin tab por defecto - esperar a que se cargue la sesión
   useEffect(() => {
     if (!isSessionRestored) {
-      // Crear pestaña simple por defecto SIN cargar sesiones
-      const defaultTab: Tab = {
-        id: `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        title: 'Google',
-        url: 'https://www.google.com', // Por defecto Google
-        favicon: undefined,
-        isLoading: false,
-        canGoBack: false,
-        canGoForward: false,
-        history: [],
-        historyIndex: -1
-      };
-
-      setState({
-        tabs: [defaultTab],
-        activeTabId: defaultTab.id
-      });
-      
+      // NO crear tab por defecto - dejar que SimpleKokoWeb cargue la sesión
+      // Solo marcar como restaurado para no ejecutar esto de nuevo
       setIsSessionRestored(true);
     }
   }, [isSessionRestored]);

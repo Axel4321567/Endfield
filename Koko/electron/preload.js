@@ -607,6 +607,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     
     tabGetUrl: (tabId) => {
       return ipcRenderer.invoke('puppeteer-tab-get-url', tabId);
+    },
+    
+    // 💾 Sistema de persistencia de sesiones
+    sessionSave: () => {
+      console.log('💾 [Session] Guardando sesión');
+      return ipcRenderer.invoke('puppeteer-session-save');
+    },
+    
+    sessionLoad: () => {
+      console.log('📂 [Session] Cargando sesión');
+      return ipcRenderer.invoke('puppeteer-session-load');
+    },
+    
+    sessionClear: () => {
+      console.log('🗑️ [Session] Limpiando sesión');
+      return ipcRenderer.invoke('puppeteer-session-clear');
     }
   },
   
