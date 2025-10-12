@@ -399,6 +399,65 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     };
   }, [createNewTab]);
 
+  // Función para validar y normalizar URL
+  const normalizeUrl = (input: string): string => {
+    const trimmedInput = input.trim();
+    
+    console.log('🔧 [URL Normalizer] Input:', trimmedInput);
+    
+    // Si ya tiene protocolo, retornar tal cual
+    if (trimmedInput.startsWith('http://') || trimmedInput.startsWith('https://')) {
+      console.log('✅ [URL Normalizer] Ya tiene protocolo:', trimmedInput);
+      return trimmedInput;
+    }
+    
+    // Si contiene espacios, es una búsqueda
+    if (trimmedInput.includes(' ')) {
+      const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(trimmedInput)}`;
+      console.log('🔍 [URL Normalizer] Búsqueda detectada:', searchUrl);
+      return searchUrl;
+    }
+    
+    // Dominios populares sin TLD
+    const popularDomains: { [key: string]: string } = {
+      'youtube': 'https://www.youtube.com',
+      'yt': 'https://www.youtube.com',
+      'google': 'https://www.google.com',
+      'facebook': 'https://www.facebook.com',
+      'fb': 'https://www.facebook.com',
+      'twitter': 'https://www.twitter.com',
+      'x': 'https://www.x.com',
+      'instagram': 'https://www.instagram.com',
+      'ig': 'https://www.instagram.com',
+      'github': 'https://www.github.com',
+      'reddit': 'https://www.reddit.com',
+      'amazon': 'https://www.amazon.com',
+      'netflix': 'https://www.netflix.com',
+      'twitch': 'https://www.twitch.tv',
+      'discord': 'https://www.discord.com',
+      'wikipedia': 'https://www.wikipedia.org',
+      'wiki': 'https://www.wikipedia.org'
+    };
+    
+    const lowerInput = trimmedInput.toLowerCase();
+    if (popularDomains[lowerInput]) {
+      console.log('🌟 [URL Normalizer] Dominio popular detectado:', popularDomains[lowerInput]);
+      return popularDomains[lowerInput];
+    }
+    
+    // Si contiene punto, asumir que es un dominio
+    if (trimmedInput.includes('.')) {
+      const url = `https://${trimmedInput}`;
+      console.log('🌐 [URL Normalizer] Dominio con punto:', url);
+      return url;
+    }
+    
+    // Si no tiene espacios ni puntos, hacer búsqueda
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(trimmedInput)}`;
+    console.log('🔍 [URL Normalizer] Búsqueda de palabra única:', searchUrl);
+    return searchUrl;
+  };
+
   // Función para abrir URL en Puppeteer Browser embebido
   const openInPuppeteerBrowser = async (url: string) => {
     if (!window.electronAPI?.puppeteerBrowser) {
@@ -409,12 +468,16 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     setIsPuppeteerLoading(true);
     
     try {
-      const result = await window.electronAPI.puppeteerBrowser.open(url);
+      // Normalizar URL antes de abrir
+      const normalizedUrl = normalizeUrl(url);
+      console.log('🎯 [Puppeteer] URL normalizada:', normalizedUrl);
+      
+      const result = await window.electronAPI.puppeteerBrowser.open(normalizedUrl);
       
       if (result.success) {
-        console.log('✅ [Puppeteer] URL abierta:', url);
+        console.log('✅ [Puppeteer] URL abierta:', normalizedUrl);
         setIsPuppeteerOpen(true);
-        setPuppeteerUrl(url);
+        setPuppeteerUrl(normalizedUrl);
         
         // Mostrar el BrowserView inmediatamente después de abrirlo
         await window.electronAPI.puppeteerBrowser.show();
