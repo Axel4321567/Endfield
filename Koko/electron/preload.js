@@ -587,6 +587,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     hide: () => {
       console.log('🙈 [Puppeteer] Ocultando navegador embebido');
       return ipcRenderer.invoke('puppeteer-hide');
+    },
+    
+    // 🗂️ Sistema de múltiples tabs
+    tabNavigate: (tabId, url) => {
+      console.log('🗂️ [Puppeteer Tab] Navegando tab:', tabId, 'a URL:', url);
+      return ipcRenderer.invoke('puppeteer-tab-navigate', tabId, url);
+    },
+    
+    tabSwitch: (tabId) => {
+      console.log('🔄 [Puppeteer Tab] Cambiando a tab:', tabId);
+      return ipcRenderer.invoke('puppeteer-tab-switch', tabId);
+    },
+    
+    tabClose: (tabId) => {
+      console.log('🗑️ [Puppeteer Tab] Cerrando tab:', tabId);
+      return ipcRenderer.invoke('puppeteer-tab-close', tabId);
+    },
+    
+    tabGetUrl: (tabId) => {
+      return ipcRenderer.invoke('puppeteer-tab-get-url', tabId);
     }
   },
   

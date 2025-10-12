@@ -164,6 +164,30 @@ interface ElectronAPI {
       message?: string;
       error?: string;
     }>;
+    // 🗂️ Sistema de múltiples tabs
+    tabNavigate: (tabId: string, url: string) => Promise<{
+      success: boolean;
+      tabId?: string;
+      url?: string;
+      error?: string;
+    }>;
+    tabSwitch: (tabId: string) => Promise<{
+      success: boolean;
+      tabId?: string;
+      currentUrl?: string | null;
+      error?: string;
+    }>;
+    tabClose: (tabId: string) => Promise<{
+      success: boolean;
+      tabId?: string;
+      error?: string;
+    }>;
+    tabGetUrl: (tabId: string) => Promise<{
+      success: boolean;
+      tabId?: string;
+      url?: string | null;
+      error?: string;
+    }>;
   };
   [key: string]: any;
 }

@@ -16,6 +16,10 @@ let mainWindow = null;
 let resizeTimeout = null;
 let resizeRAF = null;
 
+// 🗂️ Pool de BrowserViews - uno por cada tab
+const browserViewPool = new Map(); // tabId -> BrowserView
+let activeTabId = null;
+
 // Polyfill para requestAnimationFrame en Node.js
 const requestAnimationFrame = global.requestAnimationFrame || setImmediate;
 const cancelAnimationFrame = global.cancelAnimationFrame || clearImmediate;
@@ -176,6 +180,164 @@ function createOrUpdateBrowserView(url) {
     console.error('❌ [BrowserView] Error al crear:', error);
     throw error;
   }
+}
+
+/**
+ * 🗂️ Obtener o crear BrowserView para una tab específica
+ */
+function getOrCreateBrowserViewForTab(tabId, url) {
+  console.log('🗂️ [BrowserView Pool] Solicitando BrowserView para tab:', tabId);
+  
+  // Si ya existe, reutilizarlo
+  if (browserViewPool.has(tabId)) {
+    console.log('♻️ [BrowserView Pool] Reutilizando BrowserView existente para tab:', tabId);
+    const browserView = browserViewPool.get(tabId);
+    
+    // Verificar que no esté destruido
+    if (!browserView.webContents.isDestroyed()) {
+      return browserView;
+    } else {
+      console.warn('⚠️ [BrowserView Pool] BrowserView destruido, creando nuevo');
+      browserViewPool.delete(tabId);
+    }
+  }
+  
+  // Crear nuevo BrowserView
+  console.log('🆕 [BrowserView Pool] Creando nuevo BrowserView para tab:', tabId);
+  
+  // Obtener la sesión webview pre-configurada con anti-detección
+  const webviewSession = session.fromPartition('persist:webview', { cache: true });
+  
+  const browserView = new BrowserView({
+    webPreferences: {
+      session: webviewSession,
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      devTools: false,
+      backgroundThrottling: false
+    }
+  });
+  
+  // Cargar URL
+  browserView.webContents.loadURL(url);
+  
+  // Guardar en el pool
+  browserViewPool.set(tabId, browserView);
+  console.log('✅ [BrowserView Pool] BrowserView creado y almacenado. Total en pool:', browserViewPool.size);
+  
+  return browserView;
+}
+
+/**
+ * 🔄 Cambiar tab activa (mostrar BrowserView de esa tab, ocultar los demás)
+ */
+function switchToTab(tabId) {
+  console.log('🔄 [Tab Switch] Cambiando a tab:', tabId);
+  
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.error('❌ [Tab Switch] Ventana principal no disponible');
+    return;
+  }
+  
+  // Obtener BrowserView de la tab
+  const browserView = browserViewPool.get(tabId);
+  
+  if (!browserView || browserView.webContents.isDestroyed()) {
+    console.error('❌ [Tab Switch] No hay BrowserView para tab:', tabId);
+    return;
+  }
+  
+  // Remover todos los BrowserViews de la ventana
+  const currentViews = mainWindow.getBrowserViews();
+  currentViews.forEach(view => {
+    mainWindow.removeBrowserView(view);
+  });
+  
+  // Agregar solo el BrowserView de la tab activa
+  mainWindow.addBrowserView(browserView);
+  
+  // Actualizar bounds
+  updateBoundsForBrowserView(browserView);
+  
+  // Actualizar tab activa
+  activeTabId = tabId;
+  currentBrowserView = browserView;
+  
+  console.log('✅ [Tab Switch] Tab cambiada exitosamente a:', tabId);
+}
+
+/**
+ * 🗑️ Cerrar BrowserView de una tab específica
+ */
+function closeBrowserViewForTab(tabId) {
+  console.log('🗑️ [BrowserView Pool] Cerrando BrowserView para tab:', tabId);
+  
+  const browserView = browserViewPool.get(tabId);
+  
+  if (browserView) {
+    try {
+      // Remover de la ventana
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.removeBrowserView(browserView);
+      }
+      
+      // Destruir webContents
+      if (!browserView.webContents.isDestroyed()) {
+        browserView.webContents.destroy();
+      }
+      
+      // Remover del pool
+      browserViewPool.delete(tabId);
+      console.log('✅ [BrowserView Pool] BrowserView cerrado. Total en pool:', browserViewPool.size);
+    } catch (error) {
+      console.error('❌ [BrowserView Pool] Error al cerrar:', error.message);
+    }
+  }
+}
+
+/**
+ * 📐 Actualizar bounds de un BrowserView específico
+ */
+function updateBoundsForBrowserView(browserView) {
+  if (!mainWindow || mainWindow.isDestroyed() || !browserView || browserView.webContents.isDestroyed()) {
+    return;
+  }
+  
+  mainWindow.webContents.executeJavaScript(`
+    (() => {
+      const sidebar = document.querySelector('.sidebar-container');
+      const tabBar = document.querySelector('.tab-bar');
+      const controlPanel = document.querySelector('.puppeteer-control-panel');
+      
+      const sidebarWidth = sidebar ? sidebar.offsetWidth : 280;
+      const tabBarHeight = tabBar ? tabBar.offsetHeight : 48;
+      const controlPanelHeight = controlPanel ? controlPanel.offsetHeight : 60;
+      const totalHeaderHeight = tabBarHeight + controlPanelHeight;
+      
+      return { sidebarWidth, totalHeaderHeight };
+    })()
+  `).then(({ sidebarWidth, totalHeaderHeight }) => {
+    const bounds = mainWindow.getContentBounds();
+    const boundsConfig = {
+      x: sidebarWidth,
+      y: totalHeaderHeight,
+      width: bounds.width - sidebarWidth,
+      height: bounds.height - totalHeaderHeight
+    };
+    
+    browserView.setBounds(boundsConfig);
+  }).catch(() => {
+    // Fallback
+    const bounds = mainWindow.getContentBounds();
+    browserView.setBounds({
+      x: 280,
+      y: 108,
+      width: bounds.width - 280,
+      height: bounds.height - 108
+    });
+  });
 }
 
 /**
@@ -437,7 +599,10 @@ export function registerPuppeteerBrowserHandlers(window) {
       // Usar RAF para sincronizar con el repintado del navegador
       resizeRAF = requestAnimationFrame(() => {
         try {
-          if (currentBrowserView && !currentBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
+          // Actualizar BrowserView activo (del pool de tabs)
+          const activeBrowserView = activeTabId ? browserViewPool.get(activeTabId) : currentBrowserView;
+          
+          if (activeBrowserView && !activeBrowserView.webContents.isDestroyed() && mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.executeJavaScript(`
               (() => {
                 const sidebar = document.querySelector('.sidebar-container');
@@ -450,9 +615,9 @@ export function registerPuppeteerBrowserHandlers(window) {
                 return { sidebarWidth, headerHeight };
               })()
             `).then(({ sidebarWidth, headerHeight }) => {
-              if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
+              if (activeBrowserView && !activeBrowserView.webContents.isDestroyed()) {
                 const bounds = mainWindow.getContentBounds();
-                currentBrowserView.setBounds({
+                activeBrowserView.setBounds({
                   x: sidebarWidth,
                   y: headerHeight,
                   width: bounds.width - sidebarWidth,
@@ -460,10 +625,10 @@ export function registerPuppeteerBrowserHandlers(window) {
                 });
               }
             }).catch((error) => {
-              if (currentBrowserView && !currentBrowserView.webContents.isDestroyed()) {
+              if (activeBrowserView && !activeBrowserView.webContents.isDestroyed()) {
                 const bounds = mainWindow.getContentBounds();
                 const fallbackHeaderHeight = 108; // 48px (TabBar) + 60px (Control Panel)
-                currentBrowserView.setBounds({
+                activeBrowserView.setBounds({
                   x: 280,
                   y: fallbackHeaderHeight,
                   width: bounds.width - 280,
@@ -515,7 +680,83 @@ export function registerPuppeteerBrowserHandlers(window) {
     `).catch(err => console.warn('⚠️ [BrowserView] No se pudo configurar observer:', err.message));
   }
   
-  console.log('✅ [Puppeteer] Handlers registrados correctamente');
+  // 🗂️ Handlers para sistema de múltiples tabs
+  
+  // Crear o navegar BrowserView para una tab específica
+  ipcMain.handle('puppeteer-tab-navigate', async (event, tabId, url) => {
+    try {
+      console.log('🗂️ [Tab Navigate] Tab:', tabId, 'URL:', url);
+      
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        return { success: false, error: 'Ventana principal no disponible' };
+      }
+      
+      // Normalizar URL
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url;
+      }
+      
+      // Obtener o crear BrowserView para esta tab
+      const browserView = getOrCreateBrowserViewForTab(tabId, url);
+      
+      // Si no es la tab activa, no mostrarla todavía
+      if (tabId === activeTabId) {
+        switchToTab(tabId);
+      }
+      
+      return { success: true, tabId, url };
+    } catch (error) {
+      console.error('❌ [Tab Navigate] Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Cambiar a una tab específica
+  ipcMain.handle('puppeteer-tab-switch', async (event, tabId) => {
+    try {
+      console.log('🔄 [Tab Switch Handler] Cambiando a tab:', tabId);
+      switchToTab(tabId);
+      
+      // Obtener URL actual del BrowserView
+      const browserView = browserViewPool.get(tabId);
+      const currentUrl = browserView && !browserView.webContents.isDestroyed() 
+        ? browserView.webContents.getURL() 
+        : null;
+      
+      return { success: true, tabId, currentUrl };
+    } catch (error) {
+      console.error('❌ [Tab Switch Handler] Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Cerrar BrowserView de una tab
+  ipcMain.handle('puppeteer-tab-close', async (event, tabId) => {
+    try {
+      console.log('🗑️ [Tab Close Handler] Cerrando tab:', tabId);
+      closeBrowserViewForTab(tabId);
+      return { success: true, tabId };
+    } catch (error) {
+      console.error('❌ [Tab Close Handler] Error:', error);
+      return { success: false, error: error.message };
+    }
+  });
+  
+  // Obtener URL actual de una tab
+  ipcMain.handle('puppeteer-tab-get-url', async (event, tabId) => {
+    try {
+      const browserView = browserViewPool.get(tabId);
+      const url = browserView && !browserView.webContents.isDestroyed() 
+        ? browserView.webContents.getURL() 
+        : null;
+      
+      return { success: true, tabId, url };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  });
+  
+  console.log('✅ [Puppeteer] Handlers registrados correctamente (incluyendo sistema de tabs)');
 }
 
 /**

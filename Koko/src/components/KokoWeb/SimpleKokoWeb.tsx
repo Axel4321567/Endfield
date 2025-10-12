@@ -353,6 +353,37 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     };
   }, [isElectron]); // Se ejecuta cuando isElectron cambia a true
 
+  // 🔗 Sincronizar BrowserView con tab activa (nuevo sistema de múltiples BrowserViews)
+  useEffect(() => {
+    const syncBrowserViewWithTab = async () => {
+      if (!isElectron || !activeTab || !window.electronAPI?.puppeteerBrowser) {
+        return;
+      }
+
+      console.log('🔄 [Tab Sync] Sincronizando con tab activa:', {
+        tabId: activeTab.id,
+        tabUrl: activeTab.url
+      });
+
+      // Actualizar el input URL con la URL de la tab activa
+      setPuppeteerUrl(activeTab.url);
+
+      try {
+        // Navegar el BrowserView de esta tab
+        await window.electronAPI.puppeteerBrowser.tabNavigate(activeTab.id, activeTab.url);
+        
+        // Cambiar a este BrowserView
+        await window.electronAPI.puppeteerBrowser.tabSwitch(activeTab.id);
+        
+        console.log('✅ [Tab Sync] Tab sincronizada exitosamente');
+      } catch (error) {
+        console.error('❌ [Tab Sync] Error:', error);
+      }
+    };
+
+    syncBrowserViewWithTab();
+  }, [activeTabId, isElectron]); // Solo cuando cambia la tab activa
+
   // Efecto para actualizar iframe cuando cambia la URL de la pestaña activa
   useEffect(() => {
     if (activeTab && !isElectron && iframeRef.current) {
@@ -477,10 +508,10 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     return searchUrl;
   };
 
-  // Función para abrir URL en Puppeteer Browser embebido
+  // Función para abrir URL en Puppeteer Browser embebido (nuevo sistema de tabs)
   const openInPuppeteerBrowser = async (url: string) => {
-    if (!window.electronAPI?.puppeteerBrowser) {
-      console.warn('⚠️ [Puppeteer] API no disponible');
+    if (!window.electronAPI?.puppeteerBrowser || !activeTab) {
+      console.warn('⚠️ [Puppeteer] API no disponible o no hay tab activa');
       return false;
     }
 
@@ -491,16 +522,21 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
       const normalizedUrl = normalizeUrl(url);
       console.log('🎯 [Puppeteer] URL normalizada:', normalizedUrl);
       
-      const result = await window.electronAPI.puppeteerBrowser.open(normalizedUrl);
+      // Navegar el BrowserView de la tab activa
+      const result = await window.electronAPI.puppeteerBrowser.tabNavigate(activeTab.id, normalizedUrl);
       
       if (result.success) {
-        console.log('✅ [Puppeteer] URL abierta:', normalizedUrl);
+        console.log('✅ [Puppeteer] URL abierta en tab:', activeTab.id, normalizedUrl);
         setIsPuppeteerOpen(true);
         setPuppeteerUrl(normalizedUrl);
         
-        // Mostrar el BrowserView inmediatamente después de abrirlo
-        await window.electronAPI.puppeteerBrowser.show();
-        console.log('👁️ [Puppeteer] BrowserView mostrado');
+        // Actualizar la tab activa con la nueva URL
+        console.log('🔄 [Puppeteer] Actualizando tab activa con URL:', normalizedUrl);
+        updateTab(activeTab.id, { url: normalizedUrl });
+        
+        // Cambiar a este BrowserView
+        await window.electronAPI.puppeteerBrowser.tabSwitch(activeTab.id);
+        console.log('👁️ [Puppeteer] BrowserView de tab mostrado');
         
         return true;
       } else {
@@ -699,8 +735,30 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
     }
   };
 
-  const handleNewTab = () => {
-    createNewTab(); // Usa los valores por defecto (Google)
+  const handleNewTab = async () => {
+    const defaultUrl = 'https://www.google.com';
+    createNewTab(defaultUrl, 'Google'); // Crea nueva tab con Google
+    
+    // Si estamos en Electron, navegar el BrowserView a la URL de la nueva tab
+    if (isElectron && window.electronAPI?.puppeteerBrowser) {
+      console.log('🆕 [New Tab] Navegando BrowserView a Google');
+      await openInPuppeteerBrowser(defaultUrl);
+    }
+  };
+
+  const handleCloseTab = async (tabId: string) => {
+    // Cerrar BrowserView de esta tab si estamos en Electron
+    if (isElectron && window.electronAPI?.puppeteerBrowser) {
+      try {
+        console.log('🗑️ [Close Tab] Cerrando BrowserView de tab:', tabId);
+        await window.electronAPI.puppeteerBrowser.tabClose(tabId);
+      } catch (error) {
+        console.error('❌ [Close Tab] Error cerrando BrowserView:', error);
+      }
+    }
+    
+    // Cerrar la tab del estado
+    closeTab(tabId);
   };
 
   const handleWebviewLoad = (tabId: string) => {
@@ -829,7 +887,7 @@ export const SimpleKokoWeb: React.FC<SimpleKokoWebProps> = React.memo(({ tabsMan
         tabs={tabs}
         activeTabId={activeTabId}
         onTabSelect={switchTab}
-        onTabClose={closeTab}
+        onTabClose={handleCloseTab}
         onNewTab={handleNewTab}
       />
 
