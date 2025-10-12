@@ -3,7 +3,7 @@
  * Servicio para gestionar contraseñas, usuarios y tokens de forma segura
  */
 
-import DatabaseService from './database-service.js';
+import DatabaseService from '../database-service.js';
 import crypto from 'crypto';
 
 /**

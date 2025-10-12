@@ -13,6 +13,15 @@ export async function setupDiscordSession() {
   // Configurar user agent
   discordSession.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
   
+  // 🔒 INTERCEPTAR HEADERS HTTP - Cambiar User-Agent real
+  discordSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    details.requestHeaders['Accept-Language'] = 'es-ES,es;q=0.9,en;q=0.8';
+    details.requestHeaders['DNT'] = '1';
+    
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+  
   // Permitir cookies persistentes para Discord
   try {
     await discordSession.cookies.set({
@@ -33,10 +42,46 @@ export async function setupDiscordSession() {
 }
 
 /**
+ * Configura la sesión de webview con persistencia (para Google, etc.)
+ */
+export function setupWebviewSession() {
+  const webviewSession = session.fromPartition('persist:webview', { cache: true });
+  
+  // Configurar user agent SIN "Electron"
+  webviewSession.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+  
+  // 🔒 INTERCEPTAR HEADERS HTTP - Cambiar User-Agent real para evitar detección
+  webviewSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    // User-Agent SIN "Electron" para evitar detección de bots
+    details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    details.requestHeaders['Accept-Language'] = 'es-ES,es;q=0.9,en;q=0.8';
+    details.requestHeaders['DNT'] = '1';
+    
+    // Headers adicionales para parecer navegador real
+    details.requestHeaders['sec-ch-ua'] = '"Chromium";v="131", "Not_A Brand";v="24"';
+    details.requestHeaders['sec-ch-ua-mobile'] = '?0';
+    details.requestHeaders['sec-ch-ua-platform'] = '"Windows"';
+    
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
+  
+  console.log('✅ [Webview] Sesión persistente configurada con headers anti-detección');
+  return webviewSession;
+}
+
+/**
  * Configura la sesión principal con permisos y headers
  */
 export function setupMainSession() {
   const ses = session.defaultSession;
+  
+  // 🔒 INTERCEPTAR HEADERS HTTP - Cambiar User-Agent real
+  ses.webRequest.onBeforeSendHeaders((details, callback) => {
+    details.requestHeaders['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    details.requestHeaders['Accept-Language'] = 'es-ES,es;q=0.9,en;q=0.8';
+    
+    callback({ cancel: false, requestHeaders: details.requestHeaders });
+  });
   
   // Configurar headers CORS permisivos
   ses.webRequest.onHeadersReceived((details, callback) => {
@@ -107,5 +152,6 @@ export function setupMainSession() {
 
 export default {
   setupDiscordSession,
-  setupMainSession
+  setupMainSession,
+  setupWebviewSession
 };

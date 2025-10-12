@@ -4,7 +4,7 @@
  */
 
 import { ipcMain } from 'electron';
-import PasswordManagerService from '../services/password-manager-service.js';
+import PasswordManagerService from '../services/auth/password-manager-service.js';
 
 /**
  * Registra los handlers IPC para el gestor de contraseñas

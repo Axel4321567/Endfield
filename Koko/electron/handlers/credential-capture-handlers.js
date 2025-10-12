@@ -4,8 +4,8 @@ import {
   TOKEN_CAPTURE_SCRIPT,
   processCapturedCredential,
   processCapturedToken
-} from '../services/credential-capture-service.js';
-import PasswordManagerService from '../services/password-manager-service.js';
+} from '../services/credential-capture/credential-capture-service.js';
+import PasswordManagerService from '../services/auth/password-manager-service.js';
 
 /**
  * Registra todos los handlers IPC para captura de credenciales
@@ -15,28 +15,20 @@ export function registerCredentialCaptureHandlers() {
 
   /**
    * Inyecta el script de captura en un webContents
+   * @param {number} webContentsId - ID del webContents
+   * @param {string} scriptType - Tipo de script: 'credential', 'token', 'discord', 'all', 'discord-full'
    */
-  ipcMain.handle('credential-capture:inject', async (event, webContentsId) => {
+  ipcMain.handle('credential-capture:inject', async (event, webContentsId, scriptType = 'all') => {
     try {
-      console.log(`🔌 [CredentialCaptureHandlers] Inyectando script de captura en webContents ${webContentsId}`);
+      console.log(`🔌 [CredentialCaptureHandlers] Inyectando script (${scriptType}) en webContents ${webContentsId}`);
       
-      const { webContents } = await import('electron');
-      const targetWebContents = webContents.fromId(webContentsId);
+      // Importar dinámicamente el servicio refactorizado
+      const CredentialCaptureService = (await import('../services/credential-capture/credential-capture-service.js')).default;
       
-      if (!targetWebContents) {
-        throw new Error(`WebContents con ID ${webContentsId} no encontrado`);
-      }
-
-      // Inyectar script de captura de credenciales
-      await targetWebContents.executeJavaScript(CREDENTIAL_CAPTURE_SCRIPT);
+      const result = await CredentialCaptureService.injectScript(webContentsId, scriptType);
       
-      // Inyectar script de captura de tokens
-      await targetWebContents.executeJavaScript(TOKEN_CAPTURE_SCRIPT);
+      return result;
       
-      return { 
-        success: true, 
-        message: 'Script de captura inyectado correctamente' 
-      };
     } catch (error) {
       console.error('❌ [CredentialCaptureHandlers] Error al inyectar script:', error);
       return { 
@@ -125,6 +117,48 @@ export function registerCredentialCaptureHandlers() {
     
     // Reenviar a todos los renderer processes
     event.sender.send('credential-capture:event', data);
+  });
+
+  /**
+   * Listener para credenciales capturadas desde webviews
+   */
+  ipcMain.on('webview-credential-captured', async (event, credentialData) => {
+    console.log('🔐 [CredentialCaptureHandlers] Credencial capturada desde webview:', credentialData.domain);
+    
+    try {
+      const result = await processCapturedCredential(credentialData);
+      console.log('✅ [CredentialCaptureHandlers] Credencial guardada:', result.id);
+      
+      // Notificar a todos los renderer processes
+      event.sender.send('credential-saved', { success: true, data: result });
+    } catch (error) {
+      console.error('❌ [CredentialCaptureHandlers] Error procesando credencial:', error);
+      event.sender.send('credential-saved', { success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Listener para tokens capturados desde webviews
+   */
+  ipcMain.on('webview-token-captured', async (event, tokenData) => {
+    console.log('🎫 [CredentialCaptureHandlers] Token capturado desde webview:', tokenData.serviceName);
+    
+    try {
+      const result = await processCapturedToken(tokenData);
+      console.log('✅ [CredentialCaptureHandlers] Token guardado:', result.id);
+      
+      event.sender.send('token-saved', { success: true, data: result });
+    } catch (error) {
+      console.error('❌ [CredentialCaptureHandlers] Error procesando token:', error);
+      event.sender.send('token-saved', { success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Listener para notificaciones desde webviews
+   */
+  ipcMain.on('webview-credential-notify', (event, data) => {
+    console.log('📢 [CredentialCaptureHandlers] Notificación desde webview:', data.type);
   });
 
   console.log('✅ [CredentialCaptureHandlers] Handlers registrados correctamente');

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { customUserData } from '../config/app-config.js';
+import { customUserData } from '../../config/app-config.js';
 
 /**
  * Servicio para gestionar tokens de Discord de forma segura

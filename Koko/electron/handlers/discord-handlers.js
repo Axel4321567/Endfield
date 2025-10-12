@@ -1,5 +1,5 @@
 import { ipcMain, BrowserWindow } from 'electron';
-import { saveDiscordToken, readDiscordToken, deleteDiscordToken } from '../services/discord-token-service.js';
+import { saveDiscordToken, readDiscordToken, deleteDiscordToken } from '../services/auth/discord-token-service.js';
 
 /**
  * Handlers IPC específicos para Discord

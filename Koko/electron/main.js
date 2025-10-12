@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url';
 
 // Importar configuraciones
 import { initializeAppPaths, initializeCommandLineSwitches } from './config/app-config.js';
-import { setupDiscordSession, setupMainSession } from './config/session-config.js';
+import { setupDiscordSession, setupMainSession, setupWebviewSession } from './config/session-config.js';
 
 // Importar servicios
 import { createWindow } from './services/window-manager.js';
@@ -34,7 +34,7 @@ import PhpMyAdminManager from './automation/phpmyadmin-manager.js';
 
 // Importar Services
 import DatabaseService from './services/database-service.js';
-import PasswordManagerService from './services/password-manager-service.js';
+import PasswordManagerService from './services/auth/password-manager-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -64,6 +64,7 @@ app.whenReady().then(async () => {
   // Configurar sesiones
   await setupDiscordSession();
   setupMainSession();
+  setupWebviewSession(); // 🔒 Sesión para Google/YouTube con headers anti-detección
   
   // Configurar argumentos adicionales para funcionalidades multimedia
   app.commandLine.appendSwitch('enable-features', 'PictureInPictureAPI,MediaSession,BackgroundVideoPlayback');

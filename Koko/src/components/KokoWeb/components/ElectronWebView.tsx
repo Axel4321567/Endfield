@@ -321,8 +321,9 @@ const ElectronWebView: React.FC<ElectronWebViewProps> = ({ url, setStatus, onUrl
           border: 'none'
         }}
         allowpopups={true}
+        preload="file://electron/preload-webview.js"
         webpreferences="webSecurity=false,allowRunningInsecureContent=true,contextIsolation=false,nodeIntegration=false,experimentalFeatures=true,disableWebSecurity=true,allowDisplayingInsecureContent=true"
-        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 KokoWebBrowser/1.0"
+        useragent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0"
         partition="persist:webview"
       />
     </div>
