@@ -594,6 +594,8 @@ export function registerKokoCodeHandlers(mainWindow) {
       // Obtener el HWND de la ventana principal de Electron
       const mainHwnd = mainWindow.getNativeWindowHandle().readInt32LE(0);
       
+      console.log('📐 Bounds recibidos:', { x, y, width, height });
+      
       // Establecer el parent
       const parentSet = await setWindowParent(vscodeHwnd, mainHwnd);
       
@@ -601,7 +603,7 @@ export function registerKokoCodeHandlers(mainWindow) {
         return { success: false, error: 'No se pudo establecer el parent de la ventana' };
       }
 
-      // Actualizar posición y tamaño
+      // Actualizar posición y tamaño - usar coordenadas directas de React
       await updateWindowBounds(vscodeHwnd, x, y, width, height);
 
       // Establecer foco en la ventana embebida para poder usarla
@@ -638,7 +640,7 @@ export function registerKokoCodeHandlers(mainWindow) {
       // Usar el HWND proporcionado o el guardado
       const targetHwnd = hwnd || vscodeHwnd;
       if (targetHwnd) {
-        console.log(`🎯 Actualizando posición de HWND: ${targetHwnd}`);
+        console.log(`🎯 Actualizando posición de HWND: ${targetHwnd} x=${x}, y=${y}`);
         await updateWindowBounds(targetHwnd, x, y, width, height);
       } else {
         console.warn('⚠️ No hay HWND disponible para actualizar posición');
@@ -686,7 +688,7 @@ export function registerKokoCodeHandlers(mainWindow) {
   ipcMain.handle('koko-code:resize', async (event, { x, y, width, height }) => {
     try {
       if (vscodeHwnd) {
-        console.log('📐 [Sidebar Resize] Actualizando VS Code:', { x, y, width, height });
+        console.log('📐 [Sidebar Resize] Bounds recibidos:', { x, y, width, height });
         await updateWindowBounds(vscodeHwnd, x, y, width, height);
         return { success: true };
       }
@@ -696,6 +698,29 @@ export function registerKokoCodeHandlers(mainWindow) {
       return { success: false, error: error.message };
     }
   });
+  // Mostrar u ocultar la ventana de VS Code
+  ipcMain.handle('koko-code:set-visibility', async (event, { visible }) => {
+    try {
+      if (!vscodeHwnd) {
+        return { success: false, error: 'VS Code no está embebido' };
+      }
+
+      if (visible) {
+        // Restaurar tamaño normal - se actualizará con updatePosition
+        console.log('👁️ VS Code visible - tamaño se actualizará con updatePosition');
+      } else {
+        // Ocultar redimensionando a 0x0
+        console.log('👁️ Ocultando VS Code - redimensionando a 0x0');
+        await updateWindowBounds(vscodeHwnd, 0, 0, 0, 0);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error setting VS Code visibility:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   // Desembeber VS Code
   ipcMain.handle('koko-code:detach', async () => {
     try {

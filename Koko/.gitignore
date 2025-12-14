@@ -32,9 +32,16 @@ ENV/
 *.app
 *.zip
 *.blockmap
+*.yml
 win-unpacked/
 mac/
 linux-unpacked/
+
+# Latest release files
+latest.yml
+latest-*.yml
+builder-*.yml
+builder-*.yaml
 
 # Editor directories and files
 .vscode/*
@@ -385,6 +392,7 @@ latest-*.yml
 set-parent-*.ps1
 enforce-styles-*.ps1
 temp-*.ps1
+update-bounds-*.ps1
 *.ps1.tmp
 
 # ========================================
@@ -393,6 +401,10 @@ temp-*.ps1
 # Archivos de prompts y notas de desarrollo
 prompt_*.txt
 stylesheet.txt
+query
+
+# Release notes versionados
+release-notes-*.md
 
 # ========================================
 # Directorios de producción compilada

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { MainContent } from './components/MainContent/MainContent';
 import GlobalTerminal from './components/Terminal/GlobalTerminal';
@@ -14,6 +14,55 @@ function AppContent() {
   
   // Estado global de pestañas para persistir entre navegación del sidebar
   const tabsManager = useTabs();
+
+  // Efecto para controlar la visibilidad de VS Code cuando cambia la vista
+  useEffect(() => {
+    if (selectedOption === 'koko-code') {
+      // Mostrar VS Code si existe y actualizar su tamaño
+      console.log('👁️ [App] Mostrando VS Code');
+      window.electronAPI?.kokoCode?.setVisibility(true);
+      
+      // Actualizar posición y tamaño después de mostrar (dar tiempo al DOM)
+      setTimeout(() => {
+        const sidebar = document.querySelector('.sidebar-container');
+        if (sidebar) {
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const sidebarStyle = window.getComputedStyle(sidebar);
+          const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+          const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+          
+          const bounds = {
+            x: sidebarTotalWidth,
+            y: 0,
+            width: window.innerWidth - sidebarTotalWidth,
+            height: window.innerHeight
+          };
+          
+          console.log('📐 [App] Actualizando tamaño de VS Code:', bounds);
+          
+          // Obtener info de VS Code para el HWND
+          window.electronAPI?.kokoCode?.getInfo().then(info => {
+            if (info && info.hwnd) {
+              window.electronAPI?.kokoCode?.updatePosition({
+                hwnd: info.hwnd,
+                ...bounds
+              });
+            } else {
+              // Si no hay HWND, usar resize directo
+              window.electronAPI?.kokoCode?.resize(bounds);
+            }
+          }).catch(() => {
+            // Fallback: usar resize directo
+            window.electronAPI?.kokoCode?.resize(bounds);
+          });
+        }
+      }, 150);
+    } else {
+      // Ocultar VS Code si no estamos en esa vista
+      console.log('👁️ [App] Ocultando VS Code');
+      window.electronAPI?.kokoCode?.setVisibility(false);
+    }
+  }, [selectedOption]);
 
   const handleSelectOption = useCallback((option: string) => {
     console.log(`🎯 App: Cambiando a opción: ${option}`);

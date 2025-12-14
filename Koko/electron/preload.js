@@ -655,6 +655,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
       console.log('📏 [KokoCode] Resize directo desde sidebar:', bounds);
       return ipcRenderer.invoke('koko-code:resize', bounds);
     },
+
+    setVisibility: (visible) => {
+      console.log(`👁️ [KokoCode] ${visible ? 'Mostrando' : 'Ocultando'} VS Code`);
+      return ipcRenderer.invoke('koko-code:set-visibility', { visible });
+    },
     
     detachVSCode: () => {
       console.log('🔓 [KokoCode] Desembebiendo VS Code');

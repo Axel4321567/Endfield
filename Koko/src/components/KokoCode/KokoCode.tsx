@@ -10,21 +10,79 @@ export const KokoCode = () => {
   useEffect(() => {
     const embedVSCode = async () => {
       if (!containerRef.current) return;
-      // No embeber si ya está embebido
-      if (isVSCodeEmbedded) return;
+      
+      // Verificar si VS Code ya existe (estado global)
+      const info = await window.electronAPI?.kokoCode?.getInfo();
+      if (info && info.hwnd) {
+        // VS Code ya existe, solo mostrar y actualizar posición
+        console.log('🔄 [KokoCode] VS Code ya existe, mostrando y actualizando...');
+        hwndRef.current = info.hwnd;
+        setIsVSCodeEmbedded(true);
+        
+        // Mostrar la ventana
+        await window.electronAPI?.kokoCode?.setVisibility(true);
+        
+        // Actualizar posición después de un delay
+        setTimeout(() => {
+          if (hwndRef.current) {
+            const sidebar = document.querySelector('.sidebar-container');
+            if (sidebar) {
+              const sidebarRect = sidebar.getBoundingClientRect();
+              const sidebarStyle = window.getComputedStyle(sidebar);
+              const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+              const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+              
+              const bounds = {
+                hwnd: hwndRef.current,
+                x: sidebarTotalWidth,
+                y: 0,
+                width: window.innerWidth - sidebarTotalWidth,
+                height: window.innerHeight
+              };
+              console.log('📐 [KokoCode Mount] Actualizando posición:', bounds);
+              window.electronAPI?.kokoCode?.updatePosition(bounds);
+            }
+          }
+        }, 100);
+        return;
+      }
 
       try {
-        // Obtener las dimensiones del contenedor
-        const rect = containerRef.current.getBoundingClientRect();
+        // Esperar un frame para asegurar que el layout está listo
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        
+        // Calcular dimensiones desde el sidebar
+        const sidebar = document.querySelector('.sidebar-container');
+        if (!sidebar) {
+          console.warn('⚠️ [KokoCode] No se encontró el sidebar');
+          setError('No se encontró el sidebar');
+          return;
+        }
+        
+        const sidebarRect = sidebar.getBoundingClientRect();
+        const sidebarStyle = window.getComputedStyle(sidebar);
+        const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+        const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+        
+        const bounds = {
+          x: sidebarTotalWidth,
+          y: 0,
+          width: window.innerWidth - sidebarTotalWidth,
+          height: window.innerHeight
+        };
+        
+        console.log('📐 [KokoCode] Dimensiones calculadas desde sidebar:', bounds);
+        
+        // Verificar que tiene dimensiones válidas
+        if (bounds.width === 0 || bounds.height === 0) {
+          console.warn('⚠️ [KokoCode] Dimensiones inválidas, esperando...');
+          setError('Esperando dimensiones válidas...');
+          return;
+        }
         
         // Solicitar a Electron que embeba VS Code
         if (window.electronAPI?.kokoCode?.embedVSCode) {
-          const result = await window.electronAPI.kokoCode.embedVSCode({
-            x: Math.round(rect.x),
-            y: Math.round(rect.y),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-          });
+          const result = await window.electronAPI.kokoCode.embedVSCode(bounds);
 
           if (result.success) {
             setIsVSCodeEmbedded(true);
@@ -44,11 +102,15 @@ export const KokoCode = () => {
       }
     };
 
-    // Solo intentar embeber al montar
+    // Intentar embeber al montar
     embedVSCode();
+  }, []); // Solo al montar
 
+  useEffect(() => {
     // Actualizar posición solo cuando cambie el tamaño de la VENTANA principal
     let resizeTimeout: NodeJS.Timeout | null = null;
+    let observerTimeout: NodeJS.Timeout | null = null;
+    
     const handleResize = () => {
       // Debounce para evitar demasiadas llamadas
       if (resizeTimeout) {
@@ -56,35 +118,72 @@ export const KokoCode = () => {
       }
       
       resizeTimeout = setTimeout(() => {
-        if (containerRef.current && hwndRef.current) {
-          const rect = containerRef.current.getBoundingClientRect();
-          const bounds = {
-            hwnd: hwndRef.current,
-            x: Math.round(rect.x),
-            y: Math.round(rect.y),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height)
-          };
-          
-          console.log('📊 [Window Resize] Dimensiones:', {
-            container: {
-              x: bounds.x,
-              y: bounds.y,
-              width: bounds.width,
-              height: bounds.height
-            },
-            window: {
-              width: window.innerWidth,
+        if (hwndRef.current) {
+          const sidebar = document.querySelector('.sidebar-container');
+          if (sidebar) {
+            const sidebarRect = sidebar.getBoundingClientRect();
+            const sidebarStyle = window.getComputedStyle(sidebar);
+            const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+            const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+            
+            const bounds = {
+              hwnd: hwndRef.current,
+              x: sidebarTotalWidth,
+              y: 0,
+              width: window.innerWidth - sidebarTotalWidth,
               height: window.innerHeight
-            }
-          });
+            };
           
-          if (window.electronAPI?.kokoCode?.updatePosition) {
-            window.electronAPI.kokoCode.updatePosition(bounds);
+            console.log('📊 [Window Resize] Dimensiones:', bounds);
+          
+            if (window.electronAPI?.kokoCode?.updatePosition) {
+              window.electronAPI.kokoCode.updatePosition(bounds);
+            }
           }
         }
       }, 100);
     };
+
+    // ResizeObserver para detectar cambios en el contenedor (sidebar collapse/expand)
+    let resizeObserver: ResizeObserver | null = null;
+    if (containerRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        // Debounce para evitar updates en cada frame de animación
+        if (observerTimeout) {
+          clearTimeout(observerTimeout);
+        }
+        
+        observerTimeout = setTimeout(() => {
+          for (const entry of entries) {
+            if (hwndRef.current) {
+              // Calcular posición desde el sidebar en lugar del contenedor
+              const sidebar = document.querySelector('.sidebar-container');
+              if (sidebar) {
+                const sidebarRect = sidebar.getBoundingClientRect();
+                const sidebarStyle = window.getComputedStyle(sidebar);
+                const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+                const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+                
+                const bounds = {
+                  hwnd: hwndRef.current,
+                  x: sidebarTotalWidth,
+                  y: 0,
+                  width: window.innerWidth - sidebarTotalWidth,
+                  height: window.innerHeight
+                };
+                
+                console.log('📏 [Container Resize] Bounds calculados desde sidebar:', bounds);
+              
+                if (bounds.width > 0 && bounds.height > 0) {
+                  window.electronAPI?.kokoCode?.updatePosition(bounds);
+                }
+              }
+            }
+          }
+        }, 150); // Debounce más largo para evitar updates durante animación
+      });
+      resizeObserver.observe(containerRef.current);
+    }
 
     // Solo listener de resize de ventana principal (NO ResizeObserver para evitar duplicados)
     window.addEventListener('resize', handleResize);
@@ -94,16 +193,25 @@ export const KokoCode = () => {
       handleResize();
     }, 100);
 
-    // Cleanup: desembeber VS Code cuando se desmonte el componente
+    // Cleanup: solo ocultar VS Code, NO cerrarlo
     return () => {
+      console.log('🔓 [KokoCode Cleanup] Desmontando componente...');
       window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (resizeTimeout) {
         clearTimeout(resizeTimeout);
       }
+      if (observerTimeout) {
+        clearTimeout(observerTimeout);
+      }
       clearTimeout(initialResizeTimer);
-      if (isVSCodeEmbedded) {
-        window.electronAPI?.kokoCode?.detachVSCode();
-        hwndRef.current = null;
+      
+      // Ocultar VS Code cuando se desmonte el componente
+      if (hwndRef.current) {
+        console.log('👁️ [KokoCode Cleanup] Ocultando VS Code HWND:', hwndRef.current);
+        window.electronAPI?.kokoCode?.setVisibility(false);
       }
     };
   }, []); // Array vacío - solo ejecutar al montar

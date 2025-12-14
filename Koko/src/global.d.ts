@@ -218,6 +218,7 @@ interface ElectronAPI {
       error?: string;
     }>;
     updatePosition: (bounds: { hwnd: number; x: number; y: number; width: number; height: number }) => Promise<void>;
+    setVisibility: (visible: boolean) => Promise<{ success: boolean; error?: string }>;
     detachVSCode: () => Promise<void>;
     launchVSCode: () => Promise<void>;
   };

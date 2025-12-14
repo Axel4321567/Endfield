@@ -89,35 +89,45 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
     if (window.electronAPI?.kokoCode?.resize) {
       setTimeout(() => {
         const sidebar = document.querySelector('.sidebar-container');
-        const container = document.querySelector('.koko-code-embed-container');
         
-        if (sidebar && container) {
+        if (sidebar) {
           const sidebarRect = sidebar.getBoundingClientRect();
-          const containerRect = container.getBoundingClientRect();
+          const sidebarStyle = window.getComputedStyle(sidebar);
+          
+          // Obtener el ancho del borde derecho del sidebar
+          const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
+          
+          // El ancho total del sidebar incluye su contenido + borde
+          const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
           
           console.log('📊 [Sidebar] Dimensiones:', {
             sidebar: {
-              width: Math.round(sidebarRect.width),
+              contentWidth: Math.round(sidebarRect.width),
+              borderRight: borderRightWidth,
+              totalWidth: sidebarTotalWidth,
               collapsed: isCollapsed
-            },
-            container: {
-              x: Math.round(containerRect.x),
-              y: Math.round(containerRect.y),
-              width: Math.round(containerRect.width),
-              height: Math.round(containerRect.height)
             },
             window: {
               width: window.innerWidth,
               height: window.innerHeight
-            }
+            },
+            selectedOption
           });
           
-          const bounds = {
-            x: Math.round(containerRect.x),
-            y: Math.round(containerRect.y),
-            width: Math.round(containerRect.width),
-            height: Math.round(containerRect.height)
+          // Solo redimensionar VS Code si koko-code está seleccionado
+          const bounds = selectedOption === 'koko-code' ? {
+            x: sidebarTotalWidth,
+            y: 0,
+            width: window.innerWidth - sidebarTotalWidth,
+            height: window.innerHeight
+          } : {
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0
           };
+          
+          console.log('📏 [KokoCode] Resize directo desde sidebar:', bounds);
           window.electronAPI.kokoCode.resize(bounds);
         }
       }, 310); // Esperar a que termine la animación CSS (300ms) + margen
