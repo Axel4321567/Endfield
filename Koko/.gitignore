@@ -334,5 +334,80 @@ resources/phpmyadmin/*
 !resources/phpmyadmin/README.md
 # Archivos de configuración generados automáticamente
 resources/phpmyadmin/config.inc.php
-# MariaDB instalador (archivo grande)
+# MariaDB instalador (archivo largo)
 resources/mariadb/*.msi
+
+# ========================================
+# Archivos de credenciales y seguridad
+# ========================================
+# Credenciales guardadas
+discord-credentials.json
+saved-credentials.json
+credentials.json
+*.credentials.json
+
+# Archivos de sesión
+session-data/*.json
+*.session
+
+# Tokens y claves
+*.key
+*.pem
+*.cert
+
+# ========================================
+# Archivos de desarrollo y testing
+# ========================================
+# Scripts de prueba específicos
+test-*.js
+check-*.js
+save-discord-creds.js
+
+# Archivos de depuración
+debug*.json
+*.debug.log
+
+# ========================================
+# Archivos de release y distribución
+# ========================================
+# Notas de release antiguas
+release-notes-*.md
+!release-notes.md
+
+# Latest yml files de electron-builder
+latest.yml
+latest-*.yml
+
+# ========================================
+# PowerShell scripts temporales
+# ========================================
+# Scripts temporales generados por la aplicación
+set-parent-*.ps1
+enforce-styles-*.ps1
+temp-*.ps1
+*.ps1.tmp
+
+# ========================================
+# Archivos de documentación de trabajo
+# ========================================
+# Archivos de prompts y notas de desarrollo
+prompt_*.txt
+stylesheet.txt
+
+# ========================================
+# Directorios de producción compilada
+# ========================================
+# Vite production build
+dist/
+dist-ssr/
+
+# ========================================
+# Archivos de configuración IDE adicionales
+# ========================================
+# VS Code
+.vscode/extensions.json
+.vscode/*.code-workspace
+
+# JetBrains
+*.iml
+.idea/

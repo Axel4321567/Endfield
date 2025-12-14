@@ -211,6 +211,16 @@ interface ElectronAPI {
       error?: string;
     }>;
   };
+  kokoCode?: {
+    embedVSCode: (bounds: { x: number; y: number; width: number; height: number }) => Promise<{
+      success: boolean;
+      hwnd?: number;
+      error?: string;
+    }>;
+    updatePosition: (bounds: { hwnd: number; x: number; y: number; width: number; height: number }) => Promise<void>;
+    detachVSCode: () => Promise<void>;
+    launchVSCode: () => Promise<void>;
+  };
   [key: string]: any;
 }
 

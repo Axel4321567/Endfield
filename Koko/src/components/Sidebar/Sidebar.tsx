@@ -53,6 +53,12 @@ const TerminalIcon = () => (
   </svg>
 );
 
+const CodeIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/>
+  </svg>
+);
+
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg 
     width="14" 
@@ -77,6 +83,44 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
     if (window.electronAPI?.app?.notifySidebarChange) {
       // Iniciar la animación inmediatamente para mejor sincronización
       window.electronAPI.app.notifySidebarChange();
+    }
+    
+    // Esperar a que termine la animación CSS antes de calcular el tamaño
+    if (window.electronAPI?.kokoCode?.resize) {
+      setTimeout(() => {
+        const sidebar = document.querySelector('.sidebar-container');
+        const container = document.querySelector('.koko-code-embed-container');
+        
+        if (sidebar && container) {
+          const sidebarRect = sidebar.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          
+          console.log('📊 [Sidebar] Dimensiones:', {
+            sidebar: {
+              width: Math.round(sidebarRect.width),
+              collapsed: isCollapsed
+            },
+            container: {
+              x: Math.round(containerRect.x),
+              y: Math.round(containerRect.y),
+              width: Math.round(containerRect.width),
+              height: Math.round(containerRect.height)
+            },
+            window: {
+              width: window.innerWidth,
+              height: window.innerHeight
+            }
+          });
+          
+          const bounds = {
+            x: Math.round(containerRect.x),
+            y: Math.round(containerRect.y),
+            width: Math.round(containerRect.width),
+            height: Math.round(containerRect.height)
+          };
+          window.electronAPI.kokoCode.resize(bounds);
+        }
+      }, 310); // Esperar a que termine la animación CSS (300ms) + margen
     }
   }, [isCollapsed]);
   
@@ -139,6 +183,16 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
           <span className="sidebar-button-content">
             <PasswordIcon />
             {!isCollapsed && <span className="sidebar-button-text">Contraseñas</span>}
+          </span>
+        </button>
+        <button 
+          onClick={() => handleOptionClick('koko-code')}
+          className={`sidebar-button ${selectedOption === 'koko-code' ? 'active' : ''}`}
+          title={isCollapsed ? 'Koko-Code' : ''}
+        >
+          <span className="sidebar-button-content">
+            <CodeIcon />
+            {!isCollapsed && <span className="sidebar-button-text">Koko-Code</span>}
           </span>
         </button>
         

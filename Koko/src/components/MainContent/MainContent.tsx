@@ -4,6 +4,7 @@ import DiscordPanelSimple from '../Discord/DiscordPanelSimple';
 import { DatabaseManager } from '../Database/DatabaseManager';
 import { PhpMyAdmin } from '../Database/PhpMyAdmin';
 import PasswordManager from '../PasswordManager';
+import { KokoCode } from '../KokoCode/KokoCode';
 import type { TabsManager } from '../../types';
 import './MainContent.css';
 
@@ -52,6 +53,19 @@ export const MainContent = ({ selectedOption, tabsManager, onSelectOption }: Mai
           overflow: 'hidden'
         }}>
           <PasswordManager />
+        </div>
+      )}
+      
+      {/* Koko-Code - VS Code embebido */}
+      {selectedOption === 'koko-code' && (
+        <div style={{ 
+          display: 'flex',
+          flex: 1,
+          height: '100%',
+          width: '100%',
+          overflow: 'hidden'
+        }}>
+          <KokoCode />
         </div>
       )}
       

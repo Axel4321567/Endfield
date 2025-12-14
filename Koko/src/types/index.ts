@@ -1,4 +1,4 @@
-export type SidebarOption = 'dashboard' | 'koko-web' | 'discord' | 'database' | 'extras' | 'extras-heidisql' | 'extras-database' | 'extras-utilities' | null;
+export type SidebarOption = 'dashboard' | 'koko-web' | 'koko-code' | 'discord' | 'database' | 'extras' | 'extras-heidisql' | 'extras-database' | 'extras-utilities' | 'password-manager' | null;
 
 export interface SidebarItem {
   id: SidebarOption;

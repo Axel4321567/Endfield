@@ -633,6 +633,43 @@ contextBridge.exposeInMainWorld('electronAPI', {
       console.log('🔔 [App] Notificando cambio en sidebar');
       return ipcRenderer.invoke('notify-sidebar-change');
     }
+  },
+
+  // 📝 APIs de Koko-Code (VS Code embebido)
+  kokoCode: {
+    embedVSCode: (bounds) => {
+      console.log('🔗 [KokoCode] Embebiendo VS Code', bounds);
+      return ipcRenderer.invoke('koko-code:embed', bounds);
+    },
+    
+    updatePosition: (bounds) => {
+      return ipcRenderer.invoke('koko-code:update-position', bounds);
+    },
+
+    updateSidebar: () => {
+      console.log('📐 [KokoCode] Actualizando por cambio en sidebar');
+      return ipcRenderer.invoke('koko-code:update-sidebar');
+    },
+
+    resize: (bounds) => {
+      console.log('📏 [KokoCode] Resize directo desde sidebar:', bounds);
+      return ipcRenderer.invoke('koko-code:resize', bounds);
+    },
+    
+    detachVSCode: () => {
+      console.log('🔓 [KokoCode] Desembebiendo VS Code');
+      return ipcRenderer.invoke('koko-code:detach');
+    },
+    
+    launchVSCode: () => {
+      console.log('🚀 [KokoCode] Lanzando VS Code');
+      return ipcRenderer.invoke('koko-code:launch');
+    },
+
+    getInfo: () => {
+      console.log('📊 [KokoCode] Obteniendo información de VS Code');
+      return ipcRenderer.invoke('koko-code:get-info');
+    }
   }
 });
 
@@ -661,3 +698,4 @@ console.log('✅ [CredentialCapture] APIs de captura de credenciales disponibles
 console.log('✅ [SearchProxy] APIs de búsqueda segura disponibles en window.electronAPI.searchProxy');
 console.log('✅ [Chromium] APIs de navegador Chromium disponibles en window.electronAPI.chromium');
 console.log('✅ [Puppeteer] APIs de navegador embebido disponibles en window.electronAPI.puppeteerBrowser');
+console.log('✅ [KokoCode] APIs de VS Code embebido disponibles en window.electronAPI.kokoCode');

@@ -32,6 +32,7 @@ import { registerSearchProxyHandlers } from './handlers/search-proxy-handlers.js
 import { registerSearchProxyServiceHandlers, cleanupSearchProxy } from './handlers/search-proxy-service-handlers.js';
 import { registerChromiumHandlers, cleanupChromium } from './handlers/chromium-handlers.js';
 import { registerPuppeteerBrowserHandlers, cleanupPuppeteerBrowser } from './handlers/puppeteer-browser-handlers.js';
+import { registerKokoCodeHandlers, cleanupKokoCode } from './handlers/koko-code-handlers.js';
 
 // Importar phpMyAdmin Manager
 import PhpMyAdminManager from './automation/phpmyadmin-manager.js';
@@ -98,6 +99,7 @@ app.whenReady().then(async () => {
   registerSearchProxyServiceHandlers(); // 🔍 Handlers para gestionar el servicio del proxy
   // registerChromiumHandlers(); // 🌐 [DESHABILITADO] Handlers para gestionar Chromium
   registerPuppeteerBrowserHandlers(mainWindow); // 🎭 Handlers para navegador Puppeteer embebido
+  registerKokoCodeHandlers(mainWindow); // 📝 Handlers para embeber VS Code
   
   // Inicializar phpMyAdmin Manager
   phpMyAdminManager = new PhpMyAdminManager();
@@ -216,6 +218,15 @@ app.on('window-all-closed', () => {
   cleanupSearchProxy();
   
   // Limpiar Chromium al cerrar
+  // cleanupChromium(); // 🌐 [DESHABILITADO]
+  
+  // Limpiar Puppeteer Browser al cerrar
+  cleanupPuppeteerBrowser();
+  
+  // Limpiar Koko-Code al cerrar
+  cleanupKokoCode();
+  
+  // En macOS, mantener la app activa cuando se cierran todas las ventanas
   cleanupChromium();
   
   // Limpiar Puppeteer al cerrar
