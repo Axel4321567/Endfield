@@ -33,6 +33,7 @@ ENV/
 *.zip
 *.blockmap
 *.yml
+!.github/**/*.yml
 win-unpacked/
 mac/
 linux-unpacked/

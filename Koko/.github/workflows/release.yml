@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: npm run dist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: get_version
+        shell: bash
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Extract release notes
+        id: extract_notes
+        shell: bash
+        run: |
+          if [ -f "CHANGELOG.md" ]; then
+            # Extraer sección de la versión actual del CHANGELOG
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            awk "/^## \[${VERSION}\]|^## ${VERSION}/,/^## \[|^## [0-9]/" CHANGELOG.md | sed '1d;$d' > release_notes.md
+            if [ ! -s release_notes.md ]; then
+              echo "No changelog found for version ${VERSION}, using auto-generated notes"
+              echo "AUTO_GENERATE=true" >> $GITHUB_OUTPUT
+            else
+              echo "AUTO_GENERATE=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No CHANGELOG.md found, using auto-generated notes"
+            echo "AUTO_GENERATE=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release v${{ steps.get_version.outputs.VERSION }}
+          body_path: ${{ steps.extract_notes.outputs.AUTO_GENERATE == 'false' && 'release_notes.md' || '' }}
+          generate_release_notes: ${{ steps.extract_notes.outputs.AUTO_GENERATE == 'true' }}
+          draft: false
+          prerelease: false
+          files: |
+            dist-electron/*.exe
+            dist-electron/*.blockmap
+            dist-electron/latest.yml
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: koko-browser-v${{ steps.get_version.outputs.VERSION }}
+          path: |
+            dist-electron/*.exe
+            dist-electron/*.blockmap
+            dist-electron/latest.yml
+          retention-days: 30
