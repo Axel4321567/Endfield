@@ -88,38 +88,26 @@ export const Sidebar = ({ selectedOption, onSelectOption, isCollapsed, onToggle 
     // Esperar a que termine la animación CSS antes de calcular el tamaño
     if (window.electronAPI?.kokoCode?.resize) {
       setTimeout(() => {
-        const sidebar = document.querySelector('.sidebar-container');
+        const contentArea = document.querySelector('.content-area');
         
-        if (sidebar) {
-          const sidebarRect = sidebar.getBoundingClientRect();
-          const sidebarStyle = window.getComputedStyle(sidebar);
+        if (contentArea) {
+          const contentRect = contentArea.getBoundingClientRect();
           
-          // Obtener el ancho del borde derecho del sidebar
-          const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-          
-          // El ancho total del sidebar incluye su contenido + borde
-          const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
-          
-          console.log('📊 [Sidebar] Dimensiones:', {
-            sidebar: {
-              contentWidth: Math.round(sidebarRect.width),
-              borderRight: borderRightWidth,
-              totalWidth: sidebarTotalWidth,
-              collapsed: isCollapsed
-            },
-            window: {
-              width: window.innerWidth,
-              height: window.innerHeight
-            },
+          console.log('📊 [Sidebar] Dimensiones desde .content-area:', {
+            x: Math.round(contentRect.left),
+            y: Math.round(contentRect.top),
+            width: Math.round(contentRect.width),
+            height: Math.round(contentRect.height),
+            collapsed: isCollapsed,
             selectedOption
           });
           
           // Solo redimensionar VS Code si koko-code está seleccionado
           const bounds = selectedOption === 'koko-code' ? {
-            x: sidebarTotalWidth,
-            y: 0,
-            width: window.innerWidth - sidebarTotalWidth,
-            height: window.innerHeight
+            x: Math.round(contentRect.left),
+            y: Math.round(contentRect.top),
+            width: Math.round(contentRect.width),
+            height: Math.round(contentRect.height)
           } : {
             x: 0,
             y: 0,

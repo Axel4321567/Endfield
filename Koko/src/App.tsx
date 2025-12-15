@@ -24,18 +24,15 @@ function AppContent() {
       
       // Actualizar posición y tamaño después de mostrar (dar tiempo al DOM)
       setTimeout(() => {
-        const sidebar = document.querySelector('.sidebar-container');
-        if (sidebar) {
-          const sidebarRect = sidebar.getBoundingClientRect();
-          const sidebarStyle = window.getComputedStyle(sidebar);
-          const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-          const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+        const contentArea = document.querySelector('.content-area');
+        if (contentArea) {
+          const contentRect = contentArea.getBoundingClientRect();
           
           const bounds = {
-            x: sidebarTotalWidth,
-            y: 0,
-            width: window.innerWidth - sidebarTotalWidth,
-            height: window.innerHeight
+            x: Math.round(contentRect.left),
+            y: Math.round(contentRect.top),
+            width: Math.round(contentRect.width),
+            height: Math.round(contentRect.height)
           };
           
           console.log('📐 [App] Actualizando tamaño de VS Code:', bounds);

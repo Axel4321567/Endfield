@@ -25,19 +25,16 @@ export const KokoCode = () => {
         // Actualizar posición después de un delay
         setTimeout(() => {
           if (hwndRef.current) {
-            const sidebar = document.querySelector('.sidebar-container');
-            if (sidebar) {
-              const sidebarRect = sidebar.getBoundingClientRect();
-              const sidebarStyle = window.getComputedStyle(sidebar);
-              const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-              const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+            const contentArea = document.querySelector('.content-area');
+            if (contentArea) {
+              const contentRect = contentArea.getBoundingClientRect();
               
               const bounds = {
                 hwnd: hwndRef.current,
-                x: sidebarTotalWidth,
-                y: 0,
-                width: window.innerWidth - sidebarTotalWidth,
-                height: window.innerHeight
+                x: Math.round(contentRect.left),
+                y: Math.round(contentRect.top),
+                width: Math.round(contentRect.width),
+                height: Math.round(contentRect.height)
               };
               console.log('📐 [KokoCode Mount] Actualizando posición:', bounds);
               window.electronAPI?.kokoCode?.updatePosition(bounds);
@@ -51,27 +48,24 @@ export const KokoCode = () => {
         // Esperar un frame para asegurar que el layout está listo
         await new Promise(resolve => requestAnimationFrame(resolve));
         
-        // Calcular dimensiones desde el sidebar
-        const sidebar = document.querySelector('.sidebar-container');
-        if (!sidebar) {
-          console.warn('⚠️ [KokoCode] No se encontró el sidebar');
-          setError('No se encontró el sidebar');
+        // Calcular dimensiones desde el contenedor .content-area
+        const contentArea = document.querySelector('.content-area');
+        if (!contentArea) {
+          console.warn('⚠️ [KokoCode] No se encontró el contenedor .content-area');
+          setError('No se encontró el contenedor .content-area');
           return;
         }
         
-        const sidebarRect = sidebar.getBoundingClientRect();
-        const sidebarStyle = window.getComputedStyle(sidebar);
-        const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-        const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+        const contentRect = contentArea.getBoundingClientRect();
         
         const bounds = {
-          x: sidebarTotalWidth,
-          y: 0,
-          width: window.innerWidth - sidebarTotalWidth,
-          height: window.innerHeight
+          x: Math.round(contentRect.left),
+          y: Math.round(contentRect.top),
+          width: Math.round(contentRect.width),
+          height: Math.round(contentRect.height)
         };
         
-        console.log('📐 [KokoCode] Dimensiones calculadas desde sidebar:', bounds);
+        console.log('📐 [KokoCode] Dimensiones calculadas desde .content-area:', bounds);
         
         // Verificar que tiene dimensiones válidas
         if (bounds.width === 0 || bounds.height === 0) {
@@ -119,19 +113,16 @@ export const KokoCode = () => {
       
       resizeTimeout = setTimeout(() => {
         if (hwndRef.current) {
-          const sidebar = document.querySelector('.sidebar-container');
-          if (sidebar) {
-            const sidebarRect = sidebar.getBoundingClientRect();
-            const sidebarStyle = window.getComputedStyle(sidebar);
-            const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-            const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+          const contentArea = document.querySelector('.content-area');
+          if (contentArea) {
+            const contentRect = contentArea.getBoundingClientRect();
             
             const bounds = {
               hwnd: hwndRef.current,
-              x: sidebarTotalWidth,
-              y: 0,
-              width: window.innerWidth - sidebarTotalWidth,
-              height: window.innerHeight
+              x: Math.round(contentRect.left),
+              y: Math.round(contentRect.top),
+              width: Math.round(contentRect.width),
+              height: Math.round(contentRect.height)
             };
           
             console.log('📊 [Window Resize] Dimensiones:', bounds);
@@ -156,23 +147,20 @@ export const KokoCode = () => {
         observerTimeout = setTimeout(() => {
           for (const entry of entries) {
             if (hwndRef.current) {
-              // Calcular posición desde el sidebar en lugar del contenedor
-              const sidebar = document.querySelector('.sidebar-container');
-              if (sidebar) {
-                const sidebarRect = sidebar.getBoundingClientRect();
-                const sidebarStyle = window.getComputedStyle(sidebar);
-                const borderRightWidth = parseInt(sidebarStyle.borderRightWidth || '0', 10);
-                const sidebarTotalWidth = Math.round(sidebarRect.width) + borderRightWidth;
+              // Calcular posición desde .content-area
+              const contentArea = document.querySelector('.content-area');
+              if (contentArea) {
+                const contentRect = contentArea.getBoundingClientRect();
                 
                 const bounds = {
                   hwnd: hwndRef.current,
-                  x: sidebarTotalWidth,
-                  y: 0,
-                  width: window.innerWidth - sidebarTotalWidth,
-                  height: window.innerHeight
+                  x: Math.round(contentRect.left),
+                  y: Math.round(contentRect.top),
+                  width: Math.round(contentRect.width),
+                  height: Math.round(contentRect.height)
                 };
                 
-                console.log('📏 [Container Resize] Bounds calculados desde sidebar:', bounds);
+                console.log('📏 [Container Resize] Bounds calculados desde .content-area:', bounds);
               
                 if (bounds.width > 0 && bounds.height > 0) {
                   window.electronAPI?.kokoCode?.updatePosition(bounds);

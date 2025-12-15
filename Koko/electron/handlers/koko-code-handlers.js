@@ -255,17 +255,29 @@ async function enforceWindowStyles(hwnd) {
       '    public const int WS_MAXIMIZEBOX = 0x00010000;',
       '    public const int WS_MINIMIZEBOX = 0x00020000;',
       '    public const int WS_CAPTION = 0x00C00000;',
+      '    public const int WS_BORDER = 0x00800000;',
+      '    public const int WS_DLGFRAME = 0x00400000;',
+      '    public const int WS_SIZEBOX = 0x00040000;',
+      '    public const int WS_SYSMENU = 0x00080000;',
       '}',
       '"@',
       '',
       `$currentStyle = [Win32Enforce]::GetWindowLong([IntPtr]${hwnd}, [Win32Enforce]::GWL_STYLE)`,
-      '$newStyle = $currentStyle -band (-bnot [Win32Enforce]::WS_THICKFRAME) -band (-bnot [Win32Enforce]::WS_MAXIMIZEBOX) -band (-bnot [Win32Enforce]::WS_MINIMIZEBOX) -band (-bnot [Win32Enforce]::WS_CAPTION)',
+      '$newStyle = $currentStyle',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_THICKFRAME)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_MAXIMIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_MINIMIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_CAPTION)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_BORDER)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_DLGFRAME)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_SIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32Enforce]::WS_SYSMENU)',
       '$newStyle = $newStyle -bor [Win32Enforce]::WS_CHILD -bor [Win32Enforce]::WS_VISIBLE',
       '',
       'if ($currentStyle -ne $newStyle) {',
       `    [Win32Enforce]::SetWindowLong([IntPtr]${hwnd}, [Win32Enforce]::GWL_STYLE, $newStyle) | Out-Null`,
       `    [Win32Enforce]::SetWindowPos([IntPtr]${hwnd}, [IntPtr]0, 0, 0, 0, 0, 0x0067) | Out-Null`,
-      '    Write-Host "[StyleEnforce] Estilos restaurados - VS Code intento modificarlos"',
+      '    Write-Host "[StyleEnforce] ⚠️ Estilos restaurados - VS Code intentó modificarlos"',
       '}'
     ];
     
@@ -307,6 +319,7 @@ async function setWindowParent(childHwnd, parentHwnd) {
       '    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);',
       '    ',
       '    public const int GWL_STYLE = -16;',
+      '    public const int GWL_EXSTYLE = -20;',
       '    public const int WS_CHILD = 0x40000000;',
       '    public const int WS_VISIBLE = 0x10000000;',
       '    public const int WS_THICKFRAME = 0x00040000;',
@@ -314,6 +327,9 @@ async function setWindowParent(childHwnd, parentHwnd) {
       '    public const int WS_MINIMIZEBOX = 0x00020000;',
       '    public const int WS_SYSMENU = 0x00080000;',
       '    public const int WS_CAPTION = 0x00C00000;',
+      '    public const int WS_BORDER = 0x00800000;',
+      '    public const int WS_DLGFRAME = 0x00400000;',
+      '    public const int WS_SIZEBOX = 0x00040000;',
       '}',
       '"@',
       '',
@@ -325,9 +341,20 @@ async function setWindowParent(childHwnd, parentHwnd) {
       '$styleHex = "0x{0:X8}" -f $style',
       'Write-Host "[SetParent] Estilo original: $styleHex"',
       '',
-      '# Remover todos los estilos de resize/maximize/minimize y añadir WS_CHILD',
-      '$newStyle = $style -band (-bnot [Win32SetParent]::WS_THICKFRAME) -band (-bnot [Win32SetParent]::WS_MAXIMIZEBOX) -band (-bnot [Win32SetParent]::WS_MINIMIZEBOX) -band (-bnot [Win32SetParent]::WS_CAPTION)',
+      '# Remover TODOS los estilos que permiten resize, bordes, caption, etc.',
+      '$newStyle = $style',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_THICKFRAME)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_MAXIMIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_MINIMIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_CAPTION)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_BORDER)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_DLGFRAME)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_SIZEBOX)',
+      '$newStyle = $newStyle -band (-bnot [Win32SetParent]::WS_SYSMENU)',
+      '',
+      '# Añadir solo WS_CHILD y WS_VISIBLE',
       '$newStyle = $newStyle -bor [Win32SetParent]::WS_CHILD -bor [Win32SetParent]::WS_VISIBLE',
+      '',
       '$newStyleHex = "0x{0:X8}" -f $newStyle',
       'Write-Host "[SetParent] Estilo nuevo: $newStyleHex"',
       '',
@@ -336,8 +363,8 @@ async function setWindowParent(childHwnd, parentHwnd) {
       '$resultHex = "0x{0:X8}" -f $result',
       'Write-Host "[SetParent] Estilo aplicado, anterior: $resultHex"',
       '',
-      '# Forzar actualización con SWP_FRAMECHANGED (0x0020)',
-      `[Win32SetParent]::SetWindowPos([IntPtr]${childHwnd}, [IntPtr]0, 0, 0, 0, 0, 0x0061) | Out-Null`,
+      '# Forzar actualización con SWP_FRAMECHANGED (0x0020) + SWP_NOMOVE (0x0002) + SWP_NOSIZE (0x0001) = 0x0063',
+      `[Win32SetParent]::SetWindowPos([IntPtr]${childHwnd}, [IntPtr]0, 0, 0, 0, 0, 0x0063) | Out-Null`,
       'Write-Host "[SetParent] Frame actualizado con SWP_FRAMECHANGED"',
       '',
       '# Verificar el estilo final después de aplicar cambios',
@@ -349,14 +376,16 @@ async function setWindowParent(childHwnd, parentHwnd) {
       '$hasThickFrame = ($finalStyle -band [Win32SetParent]::WS_THICKFRAME) -ne 0',
       '$hasMaxBox = ($finalStyle -band [Win32SetParent]::WS_MAXIMIZEBOX) -ne 0',
       '$hasMinBox = ($finalStyle -band [Win32SetParent]::WS_MINIMIZEBOX) -ne 0',
+      '$hasSizeBox = ($finalStyle -band [Win32SetParent]::WS_SIZEBOX) -ne 0',
       '',
-      'if ($hasThickFrame -or $hasMaxBox -or $hasMinBox) {',
-      '    Write-Host "[SetParent] VENTANA PUEDE REDIMENSIONARSE MANUALMENTE"',
+      'if ($hasThickFrame -or $hasMaxBox -or $hasMinBox -or $hasSizeBox) {',
+      '    Write-Host "[SetParent] ⚠️ VENTANA PUEDE REDIMENSIONARSE MANUALMENTE"',
       '    Write-Host "   - WS_THICKFRAME: $hasThickFrame"',
       '    Write-Host "   - WS_MAXIMIZEBOX: $hasMaxBox"',
       '    Write-Host "   - WS_MINIMIZEBOX: $hasMinBox"',
+      '    Write-Host "   - WS_SIZEBOX: $hasSizeBox"',
       '} else {',
-      '    Write-Host "[SetParent] VENTANA NO PUEDE REDIMENSIONARSE MANUALMENTE"',
+      '    Write-Host "[SetParent] ✅ VENTANA NO PUEDE REDIMENSIONARSE MANUALMENTE"',
       '}',
       '',
       `[Win32SetParent]::SetFocus([IntPtr]${childHwnd}) | Out-Null`
@@ -413,20 +442,71 @@ public class Win32UpdateBounds {
     public static extern bool SetForegroundWindow(IntPtr hWnd);
     [DllImport("user32.dll")]
     public static extern IntPtr SetFocus(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetParent(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern bool BringWindowToTop(IntPtr hWnd);
+    [DllImport("user32.dll")]
+    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    [DllImport("user32.dll")]
+    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    
+    public const int GWL_STYLE = -16;
+    public const int WS_CHILD = 0x40000000;
+    public const int WS_VISIBLE = 0x10000000;
+    public const int WS_THICKFRAME = 0x00040000;
+    public const int WS_MAXIMIZEBOX = 0x00010000;
+    public const int WS_MINIMIZEBOX = 0x00020000;
+    public const int WS_CAPTION = 0x00C00000;
+    public const int WS_BORDER = 0x00800000;
+    public const int WS_DLGFRAME = 0x00400000;
+    public const int WS_SIZEBOX = 0x00040000;
+    public const int WS_SYSMENU = 0x00080000;
 }
 "@
 
 # Actualizar posición y tamaño (SWP_NOZORDER = 0x0004)
 [Win32UpdateBounds]::SetWindowPos([IntPtr]${hwnd}, [IntPtr]0, ${x}, ${y}, ${width}, ${height}, 0x0004) | Out-Null
 
+# RE-APLICAR estilos no-redimensionables después del resize
+# (Windows puede restaurar los estilos al hacer SetWindowPos)
+\$currentStyle = [Win32UpdateBounds]::GetWindowLong([IntPtr]${hwnd}, [Win32UpdateBounds]::GWL_STYLE)
+\$newStyle = \$currentStyle
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_THICKFRAME)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_MAXIMIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_MINIMIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_CAPTION)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_BORDER)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_DLGFRAME)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_SIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32UpdateBounds]::WS_SYSMENU)
+\$newStyle = \$newStyle -bor [Win32UpdateBounds]::WS_CHILD -bor [Win32UpdateBounds]::WS_VISIBLE
+
+if (\$currentStyle -ne \$newStyle) {
+    [Win32UpdateBounds]::SetWindowLong([IntPtr]${hwnd}, [Win32UpdateBounds]::GWL_STYLE, \$newStyle) | Out-Null
+    # Forzar actualización del frame con SWP_FRAMECHANGED
+    [Win32UpdateBounds]::SetWindowPos([IntPtr]${hwnd}, [IntPtr]0, 0, 0, 0, 0, 0x0063) | Out-Null
+}
+
 # Forzar redibujado de la ventana
 [Win32UpdateBounds]::InvalidateRect([IntPtr]${hwnd}, [IntPtr]::Zero, \$true) | Out-Null
 [Win32UpdateBounds]::UpdateWindow([IntPtr]${hwnd}) | Out-Null
 
-# Restaurar foco para mantener interactividad
-[Win32UpdateBounds]::ShowWindow([IntPtr]${hwnd}, 5) | Out-Null
-[Win32UpdateBounds]::SetForegroundWindow([IntPtr]${hwnd}) | Out-Null
-[Win32UpdateBounds]::SetFocus([IntPtr]${hwnd}) | Out-Null
+# Si es ventana hijo (WS_CHILD), necesitamos restaurar foco de forma diferente
+# Primero obtener la ventana padre
+\$parent = [Win32UpdateBounds]::GetParent([IntPtr]${hwnd})
+
+if (\$parent -ne [IntPtr]::Zero) {
+    # Es una ventana hijo, usar SetFocus directamente
+    [Win32UpdateBounds]::ShowWindow([IntPtr]${hwnd}, 5) | Out-Null
+    [Win32UpdateBounds]::BringWindowToTop([IntPtr]${hwnd}) | Out-Null
+    [Win32UpdateBounds]::SetFocus([IntPtr]${hwnd}) | Out-Null
+} else {
+    # Es ventana top-level, usar SetForegroundWindow
+    [Win32UpdateBounds]::ShowWindow([IntPtr]${hwnd}, 5) | Out-Null
+    [Win32UpdateBounds]::SetForegroundWindow([IntPtr]${hwnd}) | Out-Null
+    [Win32UpdateBounds]::SetFocus([IntPtr]${hwnd}) | Out-Null
+}
 `;
     
     writeFileSync(scriptPath, psScript);
