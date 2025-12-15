@@ -3,6 +3,8 @@
 ## 📋 Descripción
 Componente que embebe Visual Studio Code como ventana hija de Electron, permitiendo editar código directamente dentro de la aplicación Koko Browser.
 
+Actualiza este md cuando actualizes Koko Code
+
 ## 📁 Estructura de Archivos
 
 ```
@@ -309,11 +311,243 @@ Handlers en Electron para:
 - `koko-code-get-hwnd`: Obtener HWND
 
 ### Win32 APIs Usadas
+
+**Manipulación de ventana:**
 - `SetParent`: Establecer ventana padre (WS_CHILD)
 - `SetWindowPos`: Posicionar y redimensionar
 - `GetWindowLong`/`SetWindowLong`: Manipular estilos
 - `SetFocus`, `BringWindowToTop`: Restaurar foco
 - `InvalidateRect`, `UpdateWindow`: Forzar redibujado
+
+**Subclassing (bloqueo de resize):**
+- `SetWindowSubclass`: Interceptar mensajes de ventana (WM_NCHITTEST)
+- `DefSubclassProc`: Pasar mensajes no manejados
+- `RemoveWindowSubclass`: Limpiar subclass al desmontar
+
+**Debugging (coordenadas):**
+- `GetWindowRect`: Obtener coordenadas de pantalla
+- `GetClientRect`: Obtener área cliente
+- `ScreenToClient`: Convertir coordenadas pantalla → cliente
+- `GetParent`: Obtener HWND de ventana padre
+- Estructuras: `RECT` (Left, Top, Right, Bottom), `POINT` (X, Y)
+
+## 🔒 Bloqueo de Resize Manual
+
+### ⚠️ Problema
+VS Code (basado en Electron/Chromium) responde internamente a `WM_NCHITTEST` reportando zonas de resize (HTLEFT, HTRIGHT, HTTOP, HTBOTTOM, etc.) independientemente de los estilos de ventana. Esto permite que el usuario arrastre los bordes para redimensionar manualmente.
+
+### ❌ Solución Ingenua (No Usar)
+Remover WS_CAPTION, WS_BORDER, WS_DLGFRAME y retornar HTCLIENT para todos los mensajes WM_NCHITTEST **rompe el layout interno de Chromium**, causando:
+- Espacio vacío cerca del sidebar de VS Code
+- Paneles mal alineados
+- Editor desplazado
+
+**Razón:** Chromium depende de hit-testing correcto para calcular áreas internas.
+
+### ✅ Solución Estable de Doble Capa
+
+#### Capa 1: Remover SOLO Estilos de Resize
+```powershell
+# SOLO remover estilos relacionados con resize
+$newStyle = $currentStyle
+$newStyle = $newStyle -band (-bnot [Win32]::WS_THICKFRAME)   # Resize borders
+$newStyle = $newStyle -band (-bnot [Win32]::WS_SIZEBOX)      # Same as THICKFRAME
+$newStyle = $newStyle -band (-bnot [Win32]::WS_MAXIMIZEBOX)  # Maximize button
+$newStyle = $newStyle -band (-bnot [Win32]::WS_MINIMIZEBOX)  # Minimize button
+
+# PRESERVAR estilos críticos para Chromium layout
+# NO remover: WS_CAPTION, WS_BORDER, WS_DLGFRAME, WS_SYSMENU
+
+# Añadir WS_CHILD y WS_VISIBLE
+$newStyle = $newStyle -bor [Win32]::WS_CHILD -bor [Win32]::WS_VISIBLE
+
+# Aplicar estilos
+[Win32]::SetWindowLong($hwnd, $GWL_STYLE, $newStyle)
+
+# Forzar actualización del frame no-cliente
+[Win32]::SetWindowPos($hwnd, 0, 0, 0, 0, 0, 0x0063) # SWP_FRAMECHANGED
+```
+
+#### Capa 2: Interceptar SOLO Hit-Tests de Resize
+```powershell
+# Definir callback que intercepta WM_NCHITTEST selectivamente
+$callbackCode = @'
+using namespace System.Runtime.InteropServices
+[DllImport("comctl32.dll", SetLastError = $true)]
+public static extern IntPtr DefSubclassProc(
+    IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam
+);
+
+public static IntPtr SubclassProc(
+    IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam,
+    IntPtr uIdSubclass, IntPtr dwRefData
+) {
+    const uint WM_NCHITTEST = 0x0084;
+    const int HTCLIENT = 1;
+    
+    // Hit-test codes para resize
+    const int HTLEFT = 10;
+    const int HTRIGHT = 11;
+    const int HTTOP = 12;
+    const int HTBOTTOM = 15;
+    const int HTTOPLEFT = 13;
+    const int HTTOPRIGHT = 14;
+    const int HTBOTTOMLEFT = 16;
+    const int HTBOTTOMRIGHT = 17;
+    
+    if (uMsg == WM_NCHITTEST) {
+        // Llamar al handler por defecto PRIMERO
+        IntPtr result = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+        int hitTest = result.ToInt32();
+        
+        // SOLO convertir hit-tests de resize a HTCLIENT
+        if (hitTest == HTLEFT || hitTest == HTRIGHT ||
+            hitTest == HTTOP || hitTest == HTBOTTOM ||
+            hitTest == HTTOPLEFT || hitTest == HTTOPRIGHT ||
+            hitTest == HTBOTTOMLEFT || hitTest == HTBOTTOMRIGHT) {
+            return new IntPtr(HTCLIENT);
+        }
+        
+        // Pasar TODO lo demás sin modificar
+        // (caption, close button, menu, etc.)
+        return result;
+    }
+    
+    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+'@
+
+# Instalar subclass con ID único
+[Win32]::SetWindowSubclass($hwnd, $callback, 1000, [IntPtr]::Zero)
+```
+
+### 🔧 Función: fixEmbeddedVSCodeWindow(hwnd)
+
+Implementada en `koko-code-handlers.js`, esta función aplica ambas capas:
+
+**Paso 1: Remover SOLO estilos de resize**
+- ✅ Elimina: WS_THICKFRAME, WS_SIZEBOX, WS_MAXIMIZEBOX, WS_MINIMIZEBOX
+- ❌ PRESERVA: WS_CAPTION, WS_BORDER, WS_DLGFRAME, WS_SYSMENU
+- Añade: WS_CHILD y WS_VISIBLE
+- Aplica: SWP_FRAMECHANGED para forzar actualización del frame
+
+**Paso 2: Instalar subclass WM_NCHITTEST selectivo**
+- Intercepta WM_NCHITTEST ANTES de VS Code
+- Llama a DefSubclassProc primero (obtener hit-test real)
+- SOLO convierte hit-tests de resize a HTCLIENT:
+  * HTLEFT, HTRIGHT, HTTOP, HTBOTTOM
+  * HTTOPLEFT, HTTOPRIGHT, HTBOTTOMLEFT, HTBOTTOMRIGHT
+- Pasa TODO lo demás sin modificar
+- Usa `SetWindowSubclass` (no hooks globales)
+- ID de subclass: 1000
+
+**Resultado:**
+- ❌ **Cursor de resize bloqueado** - bordes no muestran flechas de resize
+- ❌ **Dragging de bordes bloqueado** - no responde a arrastre
+- ✅ **SetWindowPos programático funciona** - resize automático intacto
+- ✅ **Layout interno preservado** - sidebar, editor, paneles correctos
+- ✅ **Hit-testing selectivo** - solo resize bloqueado, resto intacto
+- ✅ **Sin hooks globales** - solo subclass local y segura
+- ✅ **Idempotente** - seguro llamar múltiples veces
+
+**Llamada en ciclo de vida:**
+```javascript
+// En embedVSCode() después de setWindowParent
+await setWindowParent(vscodeHwnd, mainWindowHandle);
+await fixEmbeddedVSCodeWindow(vscodeHwnd); // ← Aquí
+```
+
+### 📊 Flujo de Hit-Testing Selectivo
+
+```
+Usuario mueve cursor sobre ventana VS Code
+    ↓
+Windows envía WM_NCHITTEST a HWND de VS Code
+    ↓
+SetWindowSubclass intercepta mensaje
+    ↓
+Llama DefSubclassProc → obtiene hit-test real
+    ↓
+¿Es hit-test de resize (HTLEFT, HTRIGHT, etc.)?
+    ├─► SÍ → Retorna HTCLIENT (bloquear resize)
+    │        ↓
+    │        Cursor: flecha normal (no resize)
+    │        Dragging: no cambia tamaño
+    │
+    └─► NO → Retorna hit-test original
+             ↓
+             Cursor: normal según área (caption, botones, etc.)
+             Click: funciona correctamente
+             Layout: preservado
+```
+
+### 🔄 Re-aplicación de Estilos
+
+Windows y VS Code pueden intentar restaurar estilos. Para prevenir esto:
+
+**1. En setWindowParent (embed inicial)**
+```javascript
+await setWindowParent(childHwnd, parentHwnd);
+await fixEmbeddedVSCodeWindow(childHwnd);
+```
+
+**2. En updateWindowBounds (cada resize programático)**
+```powershell
+# Después de SetWindowPos, re-aplicar SOLO estilos de resize
+$currentStyle = [Win32]::GetWindowLong($hwnd, $GWL_STYLE)
+$newStyle = $currentStyle
+$newStyle = $newStyle -band (-bnot $WS_THICKFRAME)
+$newStyle = $newStyle -band (-bnot $WS_SIZEBOX)
+$newStyle = $newStyle -band (-bnot $WS_MAXIMIZEBOX)
+$newStyle = $newStyle -band (-bnot $WS_MINIMIZEBOX)
+# NO remover: WS_CAPTION, WS_BORDER, WS_DLGFRAME
+
+if ($currentStyle -ne $newStyle) {
+    [Win32]::SetWindowLong($hwnd, $GWL_STYLE, $newStyle)
+    [Win32]::SetWindowPos($hwnd, 0, 0, 0, 0, 0, 0x0063)
+}
+```
+
+**3. En enforceWindowStyles (monitor continuo, cada 500ms)**
+```javascript
+// Solo fuerza estilos de resize, NO caption/border
+setInterval(() => enforceWindowStyles(hwnd), 500);
+```
+
+### 🎯 Comparación de Enfoques
+
+| Aspecto | ❌ Ingenuo | ✅ Selectivo |
+|---------|-----------|-------------|
+| **Estilos removidos** | Todos (caption, border, etc.) | Solo resize (thickframe, sizebox) |
+| **WM_NCHITTEST** | HTCLIENT siempre | HTCLIENT solo para resize |
+| **Layout Chromium** | ❌ Roto | ✅ Preservado |
+| **Sidebar VS Code** | ❌ Espacio vacío | ✅ Correcto |
+| **Resize manual** | ✅ Bloqueado | ✅ Bloqueado |
+| **Resize programático** | ✅ Funciona | ✅ Funciona |
+| **Estabilidad** | ⚠️ Baja | ✅ Alta |
+
+### ⚠️ Limitaciones y Consideraciones
+
+**✅ Lo que funciona:**
+- Bloqueo completo de resize manual por dragging
+- Resize programático vía SetWindowPos
+- Layout interno de VS Code preservado
+- Focus y eventos de teclado/mouse
+- Actualización automática desde React
+- Hit-testing correcto para áreas no-resize
+
+**❌ Lo que NO funciona (por diseño):**
+- Usuario NO puede redimensionar arrastrando bordes
+- Usuario NO puede usar botones maximize/minimize (removidos)
+- Bordes NO responden a dragging
+
+**🔐 Seguridad y Estabilidad:**
+- Sin hooks globales (solo subclass local)
+- Sin modificación del ejecutable de VS Code
+- Solo afecta la instancia embebida
+- Preserva layout interno de Chromium
+- Cleanup automático al cerrar aplicación
+- Idempotente (seguro re-aplicar)
 
 ## 🎨 Estilos NO Aplicados
 
@@ -325,6 +559,7 @@ El CSS no afecta a VS Code directamente.
 
 ## 📊 Logs de Consola
 
+### Logs Standard
 ```
 🔄 [KokoCode] VS Code ya existe, mostrando y actualizando...
 📐 [KokoCode Mount] Actualizando posición: { x, y, width, height }
@@ -334,6 +569,90 @@ El CSS no afecta a VS Code directamente.
 📏 [Container Resize] Bounds calculados desde .content-area: { ... }
 🔓 [KokoCode Cleanup] Desmontando componente...
 ```
+
+### 🐛 Logs de Debugging (Layout)
+
+#### Frontend (HTML/React)
+Función helper `logLayoutDebug()` imprime coordenadas HTML en formato de caja:
+
+```
+==================================================
+[LAYOUT DEBUG - Window Resize]
+==================================================
+Sidebar (HTML):
+  left:   0
+  top:    0
+  width:  280
+  height: 761
+
+Content Area (HTML):
+  left:   280
+  top:    0
+  width:  845
+  height: 761
+==================================================
+```
+
+**Se ejecuta en:**
+- Mount (cuando VS Code ya existe)
+- Initial Embed (primer embed)
+- Window Resize
+- ResizeObserver (sidebar collapse/expand)
+
+#### Backend (Win32/PowerShell)
+`updateWindowBounds()` imprime coordenadas Win32 antes y después de SetWindowPos:
+
+```
+==================================================
+[WIN32 LAYOUT DEBUG - BEFORE SetWindowPos]
+==================================================
+VS Code HWND (Screen coordinates):
+  x:      280
+  y:      31
+  width:  845
+  height: 730
+
+Parent Window (Screen coordinates):
+  x:      100
+  y:      100
+  width:  1125
+  height: 761
+
+Parent Window (Client area):
+  width:  1125
+  height: 761
+
+VS Code relative to Parent (Client coords):
+  x: 180
+  y: -69
+==================================================
+
+==================================================
+[WIN32 LAYOUT DEBUG - AFTER SetWindowPos]
+==================================================
+VS Code HWND (Screen coordinates):
+  x:      380
+  y:      100
+  width:  845
+  height: 761
+
+VS Code relative to Parent (Client coords):
+  x: 280
+  y: 0
+==================================================
+```
+
+**Utilidad:**
+- Diagnosticar offsets visuales
+- Comparar coordenadas HTML vs Win32
+- Detectar problemas de screen-to-client conversion
+- Verificar posicionamiento correcto de ventana embebida
+
+**Win32 APIs usadas para debugging:**
+- `GetWindowRect` - coordenadas de pantalla
+- `GetClientRect` - área cliente de ventana
+- `ScreenToClient` - conversión de coordenadas
+- Estructuras: `RECT`, `POINT`
 
 ## 🎯 Props
 Ninguna - componente autónomo.

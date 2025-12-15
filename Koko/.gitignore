@@ -48,6 +48,11 @@ builder-*.yaml
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Documentation temporal y debug
+WIN32-RESIZE-FIX.md
+*-DEBUG.md
+*-NOTES.md
 *.suo
 *.ntvs*
 *.njsproj

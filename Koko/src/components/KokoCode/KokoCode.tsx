@@ -1,6 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
 import './KokoCode.css';
 
+// Helper para logs de debugging en formato de caja
+const logLayoutDebug = (label: string, contentArea: DOMRect, sidebar?: DOMRect) => {
+  console.log('\n' + '='.repeat(50));
+  console.log(`[LAYOUT DEBUG - ${label}]`);
+  console.log('='.repeat(50));
+  
+  if (sidebar) {
+    console.log('Sidebar (HTML):');
+    console.log(`  left:   ${Math.round(sidebar.left)}`);
+    console.log(`  top:    ${Math.round(sidebar.top)}`);
+    console.log(`  width:  ${Math.round(sidebar.width)}`);
+    console.log(`  height: ${Math.round(sidebar.height)}`);
+    console.log('');
+  }
+  
+  console.log('Content Area (HTML):');
+  console.log(`  left:   ${Math.round(contentArea.left)}`);
+  console.log(`  top:    ${Math.round(contentArea.top)}`);
+  console.log(`  width:  ${Math.round(contentArea.width)}`);
+  console.log(`  height: ${Math.round(contentArea.height)}`);
+  console.log('='.repeat(50) + '\n');
+};
+
 export const KokoCode = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVSCodeEmbedded, setIsVSCodeEmbedded] = useState(false);
@@ -26,8 +49,13 @@ export const KokoCode = () => {
         setTimeout(() => {
           if (hwndRef.current) {
             const contentArea = document.querySelector('.content-area');
+            const sidebar = document.querySelector('.sidebar');
             if (contentArea) {
               const contentRect = contentArea.getBoundingClientRect();
+              const sidebarRect = sidebar?.getBoundingClientRect();
+              
+              // Debug: mostrar layout HTML
+              logLayoutDebug('Mount (VS Code exists)', contentRect, sidebarRect);
               
               const bounds = {
                 hwnd: hwndRef.current,
@@ -50,6 +78,7 @@ export const KokoCode = () => {
         
         // Calcular dimensiones desde el contenedor .content-area
         const contentArea = document.querySelector('.content-area');
+        const sidebar = document.querySelector('.sidebar');
         if (!contentArea) {
           console.warn('⚠️ [KokoCode] No se encontró el contenedor .content-area');
           setError('No se encontró el contenedor .content-area');
@@ -57,6 +86,10 @@ export const KokoCode = () => {
         }
         
         const contentRect = contentArea.getBoundingClientRect();
+        const sidebarRect = sidebar?.getBoundingClientRect();
+        
+        // Debug: mostrar layout HTML antes del embed
+        logLayoutDebug('Initial Embed', contentRect, sidebarRect);
         
         const bounds = {
           x: Math.round(contentRect.left),
@@ -114,8 +147,13 @@ export const KokoCode = () => {
       resizeTimeout = setTimeout(() => {
         if (hwndRef.current) {
           const contentArea = document.querySelector('.content-area');
+          const sidebar = document.querySelector('.sidebar');
           if (contentArea) {
             const contentRect = contentArea.getBoundingClientRect();
+            const sidebarRect = sidebar?.getBoundingClientRect();
+            
+            // Debug: mostrar layout HTML en resize
+            logLayoutDebug('Window Resize', contentRect, sidebarRect);
             
             const bounds = {
               hwnd: hwndRef.current,
@@ -149,8 +187,13 @@ export const KokoCode = () => {
             if (hwndRef.current) {
               // Calcular posición desde .content-area
               const contentArea = document.querySelector('.content-area');
+              const sidebar = document.querySelector('.sidebar');
               if (contentArea) {
                 const contentRect = contentArea.getBoundingClientRect();
+                const sidebarRect = sidebar?.getBoundingClientRect();
+                
+                // Debug: mostrar layout HTML en container resize
+                logLayoutDebug('Container ResizeObserver', contentRect, sidebarRect);
                 
                 const bounds = {
                   hwnd: hwndRef.current,

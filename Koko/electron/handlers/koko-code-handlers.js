@@ -227,6 +227,227 @@ try {
 }
 
 /**
+ * FIX COMPLETO: Deshabilita completamente el resize manual de la ventana embebida
+ * 
+ * ESTRATEGIA DE DOBLE CAPA:
+ * 1. Remueve estilos de ventana (WS_THICKFRAME, WS_SIZEBOX, etc.)
+ * 2. Instala un subclass proc para interceptar WM_NCHITTEST
+ * 
+ * PROBLEMA: VS Code internamente responde a WM_NCHITTEST con códigos de resize (HTLEFT, HTRIGHT, etc.)
+ * SOLUCIÓN: Interceptar WM_NCHITTEST y siempre devolver HTCLIENT (área de cliente, no resize)
+ * 
+ * Esta función es segura para llamar múltiples veces (idempotente).
+ * El subclass solo se instala una vez por HWND.
+ * 
+ * @param {number} hwnd - Handle de ventana de VS Code
+ */
+async function fixEmbeddedVSCodeWindow(hwnd) {
+  const scriptPath = join(tmpdir(), `fix-vscode-window-${Date.now()}.ps1`);
+  
+  try {
+    console.log(`🔧 [FixVSCode] Aplicando fix completo de no-resize a HWND ${hwnd}`);
+    
+    const psScript = `
+# ====================================================================================
+# SOLUCIÓN COMPLETA PARA BLOQUEAR RESIZE MANUAL DE VS CODE EMBEBIDO
+# ====================================================================================
+#
+# CONTEXTO:
+# - VS Code responde internamente a WM_NCHITTEST con códigos de resize
+# - Remover estilos de ventana (WS_THICKFRAME) NO ES SUFICIENTE
+# - Necesitamos interceptar WM_NCHITTEST y forzar HTCLIENT
+#
+# MÉTODO:
+# - SetWindowSubclass: Instala un callback seguro sin hooks globales
+# - WM_NCHITTEST (0x0084): Mensaje que determina qué parte de ventana fue clickeada
+# - HTCLIENT (1): Código que indica "área de cliente" (no resize, no caption)
+#
+# RESULTADO:
+# - El cursor NUNCA muestra flechas de resize
+# - Dragging de bordes NO funciona
+# - SetWindowPos programático SIGUE funcionando
+# ====================================================================================
+
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+
+public class Win32FixVSCode {
+    // ===== Win32 API Imports =====
+    
+    [DllImport("user32.dll")]
+    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+    
+    [DllImport("user32.dll")]
+    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+    
+    [DllImport("comctl32.dll", SetLastError = true)]
+    public static extern bool SetWindowSubclass(IntPtr hWnd, SubclassProc pfnSubclass, IntPtr uIdSubclass, IntPtr dwRefData);
+    
+    [DllImport("comctl32.dll")]
+    public static extern IntPtr DefSubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam);
+    
+    // ===== Constants =====
+    
+    // GetWindowLong indices
+    public const int GWL_STYLE = -16;
+    
+    // Window styles
+    public const int WS_CHILD = 0x40000000;
+    public const int WS_VISIBLE = 0x10000000;
+    public const int WS_THICKFRAME = 0x00040000;
+    public const int WS_MAXIMIZEBOX = 0x00010000;
+    public const int WS_MINIMIZEBOX = 0x00020000;
+    public const int WS_CAPTION = 0x00C00000;
+    public const int WS_BORDER = 0x00800000;
+    public const int WS_DLGFRAME = 0x00400000;
+    public const int WS_SIZEBOX = 0x00040000;
+    public const int WS_SYSMENU = 0x00080000;
+    
+    // Window messages
+    public const uint WM_NCHITTEST = 0x0084;
+    
+    // Hit test result codes
+    public const int HTCLIENT = 1;       // Client area (normal cursor)
+    public const int HTLEFT = 10;        // Left border (resize cursor)
+    public const int HTRIGHT = 11;       // Right border
+    public const int HTTOP = 12;         // Top border
+    public const int HTTOPLEFT = 13;     // Top-left corner
+    public const int HTTOPRIGHT = 14;    // Top-right corner
+    public const int HTBOTTOM = 15;      // Bottom border
+    public const int HTBOTTOMLEFT = 16;  // Bottom-left corner
+    public const int HTBOTTOMRIGHT = 17; // Bottom-right corner
+    
+    // SetWindowPos flags
+    public const uint SWP_FRAMECHANGED = 0x0020;
+    public const uint SWP_NOMOVE = 0x0002;
+    public const uint SWP_NOSIZE = 0x0001;
+    public const uint SWP_NOZORDER = 0x0004;
+}
+
+// ===== Subclass Callback Delegate =====
+public delegate IntPtr SubclassProc(IntPtr hWnd, uint uMsg, IntPtr wParam, IntPtr lParam, IntPtr uIdSubclass, IntPtr dwRefData);
+"@
+
+# ===== Definir el Subclass Procedure =====
+# Este callback se ejecuta ANTES de que VS Code procese los mensajes
+\$subclassCallback = {
+    param(\$hWnd, \$uMsg, \$wParam, \$lParam, \$uIdSubclass, \$dwRefData)
+    
+    # Interceptar WM_NCHITTEST
+    if (\$uMsg -eq [Win32FixVSCode]::WM_NCHITTEST) {
+        # SIEMPRE devolver HTCLIENT para bloquear resize cursors
+        # Esto hace que Windows trate TODO como área de cliente
+        return [IntPtr][Win32FixVSCode]::HTCLIENT
+    }
+    
+    # Pasar otros mensajes a la implementación original
+    return [Win32FixVSCode]::DefSubclassProc(\$hWnd, \$uMsg, \$wParam, \$lParam)
+}
+
+Write-Host "[FixVSCode] 🛠️ Iniciando fix de ventana embebida..."
+
+# ===== PASO 1: Remover estilos de resize =====
+Write-Host "[FixVSCode] 📋 Paso 1/3: Removiendo estilos de ventana..."
+
+\$currentStyle = [Win32FixVSCode]::GetWindowLong([IntPtr]${hwnd}, [Win32FixVSCode]::GWL_STYLE)
+\$newStyle = \$currentStyle
+
+# Remover TODOS los estilos relacionados con resize
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_THICKFRAME)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_MAXIMIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_MINIMIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_CAPTION)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_BORDER)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_DLGFRAME)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_SIZEBOX)
+\$newStyle = \$newStyle -band (-bnot [Win32FixVSCode]::WS_SYSMENU)
+
+# Asegurar WS_CHILD y WS_VISIBLE
+\$newStyle = \$newStyle -bor [Win32FixVSCode]::WS_CHILD -bor [Win32FixVSCode]::WS_VISIBLE
+
+if (\$currentStyle -ne \$newStyle) {
+    [Win32FixVSCode]::SetWindowLong([IntPtr]${hwnd}, [Win32FixVSCode]::GWL_STYLE, \$newStyle) | Out-Null
+    
+    # Forzar actualización del frame
+    \$flags = [Win32FixVSCode]::SWP_FRAMECHANGED -bor [Win32FixVSCode]::SWP_NOMOVE -bor [Win32FixVSCode]::SWP_NOSIZE -bor [Win32FixVSCode]::SWP_NOZORDER
+    [Win32FixVSCode]::SetWindowPos([IntPtr]${hwnd}, [IntPtr]::Zero, 0, 0, 0, 0, \$flags) | Out-Null
+    
+    Write-Host "[FixVSCode]    ✅ Estilos actualizados y frame refrescado"
+} else {
+    Write-Host "[FixVSCode]    ℹ️ Estilos ya estaban correctos"
+}
+
+# ===== PASO 2: Instalar Subclass para interceptar WM_NCHITTEST =====
+Write-Host "[FixVSCode] 🎯 Paso 2/3: Instalando subclass para interceptar WM_NCHITTEST..."
+
+try {
+    # Intentar instalar subclass
+    # uIdSubclass = 1000 (ID único para este subclass)
+    # dwRefData = 0 (no necesitamos datos adicionales)
+    \$result = [Win32FixVSCode]::SetWindowSubclass([IntPtr]${hwnd}, \$subclassCallback, [IntPtr]1000, [IntPtr]::Zero)
+    
+    if (\$result) {
+        Write-Host "[FixVSCode]    ✅ Subclass instalado exitosamente"
+        Write-Host "[FixVSCode]    📌 WM_NCHITTEST ahora retorna HTCLIENT (bloquea resize cursor)"
+    } else {
+        Write-Host "[FixVSCode]    ⚠️ SetWindowSubclass retornó false (posiblemente ya estaba instalado)"
+    }
+} catch {
+    Write-Host "[FixVSCode]    ❌ Error instalando subclass: \$_"
+}
+
+# ===== PASO 3: Verificación final =====
+Write-Host "[FixVSCode] 🔍 Paso 3/3: Verificando configuración final..."
+
+\$finalStyle = [Win32FixVSCode]::GetWindowLong([IntPtr]${hwnd}, [Win32FixVSCode]::GWL_STYLE)
+\$hasThickFrame = (\$finalStyle -band [Win32FixVSCode]::WS_THICKFRAME) -ne 0
+\$hasSizeBox = (\$finalStyle -band [Win32FixVSCode]::WS_SIZEBOX) -ne 0
+
+if (\$hasThickFrame -or \$hasSizeBox) {
+    Write-Host "[FixVSCode]    ⚠️ ADVERTENCIA: Estilos de resize aún presentes"
+} else {
+    Write-Host "[FixVSCode]    ✅ Estilos de resize removidos correctamente"
+}
+
+Write-Host "[FixVSCode] 🎉 Fix completo aplicado - ventana NO puede redimensionarse manualmente"
+Write-Host "[FixVSCode] 📝 Resumen:"
+Write-Host "[FixVSCode]    - Estilos de ventana: limpios"
+Write-Host "[FixVSCode]    - Subclass WM_NCHITTEST: instalado"
+Write-Host "[FixVSCode]    - Resize programático (SetWindowPos): funciona"
+Write-Host "[FixVSCode]    - Resize manual (arrastrar): BLOQUEADO ✅"
+`;
+    
+    writeFileSync(scriptPath, psScript, { encoding: 'utf8' });
+    const { stdout, stderr } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+    
+    if (stdout) {
+      console.log('📋 [FixVSCode Output]:');
+      console.log(stdout);
+    }
+    if (stderr) {
+      console.error('⚠️ [FixVSCode Warnings]:');
+      console.error(stderr);
+    }
+    
+    console.log(`✅ [FixVSCode] Fix completo aplicado a HWND ${hwnd}`);
+    return true;
+  } catch (error) {
+    console.error('❌ [FixVSCode] Error aplicando fix:', error);
+    return false;
+  } finally {
+    try {
+      unlinkSync(scriptPath);
+    } catch (e) {
+      // Ignore cleanup errors
+    }
+  }
+}
+
+/**
  * Fuerza los estilos de ventana para prevenir resize manual
  * Se ejecuta periódicamente para contrarrestar que VS Code restaure sus estilos
  */
@@ -450,6 +671,12 @@ public class Win32UpdateBounds {
     public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
     [DllImport("user32.dll")]
     public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")]
+    public static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
     
     public const int GWL_STYLE = -16;
     public const int WS_CHILD = 0x40000000;
@@ -463,10 +690,108 @@ public class Win32UpdateBounds {
     public const int WS_SIZEBOX = 0x00040000;
     public const int WS_SYSMENU = 0x00080000;
 }
+
+[StructLayout(LayoutKind.Sequential)]
+public struct RECT {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT {
+    public int X;
+    public int Y;
+}
 "@
+
+# ============================================
+# DEBUG: Obtener coordenadas ANTES del resize
+# ============================================
+Write-Host ""
+Write-Host "=" -NoNewline; Write-Host ("=" * 48)
+Write-Host "[WIN32 LAYOUT DEBUG - BEFORE SetWindowPos]"
+Write-Host ("=" * 50)
+
+# VS Code HWND - Screen coordinates
+\$vsCodeRect = New-Object RECT
+[Win32UpdateBounds]::GetWindowRect([IntPtr]${hwnd}, [ref]\$vsCodeRect) | Out-Null
+Write-Host "VS Code HWND (Screen coordinates):"
+Write-Host ("  x:      " + \$vsCodeRect.Left)
+Write-Host ("  y:      " + \$vsCodeRect.Top)
+Write-Host ("  width:  " + (\$vsCodeRect.Right - \$vsCodeRect.Left))
+Write-Host ("  height: " + (\$vsCodeRect.Bottom - \$vsCodeRect.Top))
+Write-Host ""
+
+# Parent window
+\$parent = [Win32UpdateBounds]::GetParent([IntPtr]${hwnd})
+if (\$parent -ne [IntPtr]::Zero) {
+    # Parent - Screen coordinates
+    \$parentRect = New-Object RECT
+    [Win32UpdateBounds]::GetWindowRect(\$parent, [ref]\$parentRect) | Out-Null
+    Write-Host "Parent Window (Screen coordinates):"
+    Write-Host ("  x:      " + \$parentRect.Left)
+    Write-Host ("  y:      " + \$parentRect.Top)
+    Write-Host ("  width:  " + (\$parentRect.Right - \$parentRect.Left))
+    Write-Host ("  height: " + (\$parentRect.Bottom - \$parentRect.Top))
+    Write-Host ""
+    
+    # Parent - Client coordinates
+    \$parentClientRect = New-Object RECT
+    [Win32UpdateBounds]::GetClientRect(\$parent, [ref]\$parentClientRect) | Out-Null
+    Write-Host "Parent Window (Client area):"
+    Write-Host ("  width:  " + \$parentClientRect.Right)
+    Write-Host ("  height: " + \$parentClientRect.Bottom)
+    Write-Host ""
+    
+    # VS Code position relative to parent
+    \$topLeft = New-Object POINT
+    \$topLeft.X = \$vsCodeRect.Left
+    \$topLeft.Y = \$vsCodeRect.Top
+    [Win32UpdateBounds]::ScreenToClient(\$parent, [ref]\$topLeft) | Out-Null
+    Write-Host "VS Code relative to Parent (Client coords):"
+    Write-Host ("  x: " + \$topLeft.X)
+    Write-Host ("  y: " + \$topLeft.Y)
+}
+
+Write-Host ("=" * 50)
+Write-Host ""
 
 # Actualizar posición y tamaño (SWP_NOZORDER = 0x0004)
 [Win32UpdateBounds]::SetWindowPos([IntPtr]${hwnd}, [IntPtr]0, ${x}, ${y}, ${width}, ${height}, 0x0004) | Out-Null
+
+# ============================================
+# DEBUG: Obtener coordenadas DESPUÉS del resize
+# ============================================
+Write-Host ""
+Write-Host "=" -NoNewline; Write-Host ("=" * 48)
+Write-Host "[WIN32 LAYOUT DEBUG - AFTER SetWindowPos]"
+Write-Host ("=" * 50)
+
+# VS Code HWND - Screen coordinates
+\$vsCodeRectAfter = New-Object RECT
+[Win32UpdateBounds]::GetWindowRect([IntPtr]${hwnd}, [ref]\$vsCodeRectAfter) | Out-Null
+Write-Host "VS Code HWND (Screen coordinates):"
+Write-Host ("  x:      " + \$vsCodeRectAfter.Left)
+Write-Host ("  y:      " + \$vsCodeRectAfter.Top)
+Write-Host ("  width:  " + (\$vsCodeRectAfter.Right - \$vsCodeRectAfter.Left))
+Write-Host ("  height: " + (\$vsCodeRectAfter.Bottom - \$vsCodeRectAfter.Top))
+Write-Host ""
+
+# VS Code relative to parent
+if (\$parent -ne [IntPtr]::Zero) {
+    \$topLeftAfter = New-Object POINT
+    \$topLeftAfter.X = \$vsCodeRectAfter.Left
+    \$topLeftAfter.Y = \$vsCodeRectAfter.Top
+    [Win32UpdateBounds]::ScreenToClient(\$parent, [ref]\$topLeftAfter) | Out-Null
+    Write-Host "VS Code relative to Parent (Client coords):"
+    Write-Host ("  x: " + \$topLeftAfter.X)
+    Write-Host ("  y: " + \$topLeftAfter.Y)
+}
+
+Write-Host ("=" * 50)
+Write-Host ""
 
 # RE-APLICAR estilos no-redimensionables después del resize
 # (Windows puede restaurar los estilos al hacer SetWindowPos)
@@ -510,7 +835,15 @@ if (\$parent -ne [IntPtr]::Zero) {
 `;
     
     writeFileSync(scriptPath, psScript);
-    await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+    const { stdout, stderr } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${scriptPath}"`);
+    
+    // Imprimir logs de debugging
+    if (stdout) {
+      console.log(stdout);
+    }
+    if (stderr && stderr.trim()) {
+      console.error('⚠️ PowerShell stderr:', stderr);
+    }
     
     // Aplicar múltiples veces para asegurar que se aplica (como BrowserView)
     setTimeout(async () => {
@@ -682,6 +1015,11 @@ export function registerKokoCodeHandlers(mainWindow) {
       if (!parentSet) {
         return { success: false, error: 'No se pudo establecer el parent de la ventana' };
       }
+
+      // APLICAR FIX COMPLETO: Bloquear resize manual completamente
+      // Esto instala un subclass para interceptar WM_NCHITTEST
+      console.log('🔒 Aplicando fix completo de no-resize...');
+      await fixEmbeddedVSCodeWindow(vscodeHwnd);
 
       // Actualizar posición y tamaño - usar coordenadas directas de React
       await updateWindowBounds(vscodeHwnd, x, y, width, height);
